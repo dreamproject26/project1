@@ -130,7 +130,10 @@ const Proposal = () => {
             <div className="p-8 border border-accent/40 bg-accent/[0.06] rounded-sm">
               <p className="eyebrow-gold">Prefer a live conversation?</p>
               <div className="mt-6 space-y-3">
-                <Button variant="default" className="w-full" onClick={() => toast('Meeting link placeholder', { description: 'Admin can connect a Calendly / meeting link.' })}>
+                <Button variant="default" className="w-full" onClick={() => {
+                  if (site?.calendly_url) window.open(site.calendly_url, '_blank');
+                  else toast('Calendly not configured', { description: 'Admin can add a Calendly URL in Site Settings.' });
+                }}>
                   <CalendarIcon className="h-4 w-4 mr-2" /> Book a Meeting
                 </Button>
                 <a href={site?.whatsapp ? `https://wa.me/${(site.whatsapp || '').replace(/[^0-9]/g, '')}` : '#'} target="_blank" rel="noreferrer">

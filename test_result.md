@@ -152,6 +152,9 @@ backend:
       - working: true
         agent: "testing"
         comment: "JWT authentication working correctly. POST /api/auth/login with admin@nnventure.com / demo1234 returns JWT token. Token stored in localStorage as 'nnv_token'. GET /api/auth/me validates token and returns user info. Token correctly cleared on logout. 401 responses for unauthorized requests."
+      - working: true
+        agent: "testing"
+        comment: "ADMIN PASSWORD ROTATION VERIFIED (2026-07-05). Old password 'demo1234' correctly rejected with 401 'Invalid credentials'. New password 'cNc260JXpQ7KNxVsz$K@i3bF' accepted and returns valid JWT token. Password stored securely in /app/backend/.env as ADMIN_PASSWORD. Authentication flow working correctly with new credentials."
 
   - task: "Admin CRUD Endpoints"
     implemented: true
@@ -306,6 +309,55 @@ frontend:
     priority: "high"
     needs_retesting: false
     status_history:
+
+  - task: "Site Settings - Calendly URL Integration"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/pages/Admin.jsx, /app/frontend/src/pages/Proposal.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "CALENDLY INTEGRATION VERIFIED (2026-07-05). Site Settings now includes 'Calendly URL' field (line 276 in Admin.jsx) with help text 'Used for the Book a Meeting button on Proposal & Contact pages.' Database populated with https://calendly.com/nn-venture/discovery. Proposal page 'Book a Meeting' button (Proposal.jsx lines 133-138) correctly opens Calendly URL in new tab using window.open(). Tested and confirmed working - new window opens with exact Calendly URL. Field is editable and persists to MongoDB via PUT /api/admin/site."
+
+  - task: "Site Settings - Google Maps Embed Integration"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/pages/Admin.jsx, /app/frontend/src/pages/Contact.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "GOOGLE MAPS INTEGRATION VERIFIED (2026-07-05). Site Settings now includes 'Google Maps Embed URL' field (line 277 in Admin.jsx) with help text 'Paste the src URL from Google Maps → Share → Embed a map.' Database populated with Google Maps embed URL for Dhaka, Bangladesh. Contact page (Contact.jsx lines 106-128) renders actual Google Maps iframe when map_embed_url is set, otherwise shows placeholder. Tested and confirmed - iframe displays correctly in Location panel on Contact page. Field is editable and persists to MongoDB."
+
+  - task: "Partner Logos Display"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/pages/Home.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "PARTNER LOGOS VERIFIED (2026-07-05). Home page 'Trust & Recognition → Partners & Collaborators' section (lines 394-406) displays marquee with 7 real partner logo images. Database updated with actual logo files: (1) AXIOM CAPITAL, (2) MERIDIAN & CO., (3) HARBOUR HOLDINGS, (4) NORTHWIND GROUP, (5) SIGNAL VENTURES, (6) ORCHID PARTNERS, (7) RIDGELINE COLLECTIVE. All logos are editorial monochrome wordmarks stored in Emergent static images. Marquee animation working correctly, logos display at proper size (h-8, max-w-120px). Tested and confirmed all 7 logos visible on Home page."
+
+  - task: "Founder Executive Portrait Photo"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/pages/Home.jsx, /app/frontend/src/pages/Founder.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "FOUNDER PORTRAIT VERIFIED (2026-07-05). Founder profile now displays executive-style portrait photo (dark navy blazer, moody window light, professional office setting). Photo URL updated in database: https://static.prod-images.emergentagent.com/jobs/.../aca5b938091cdec8.... Displayed on Home page (line 157) in Founder Preview section and Founder page (line 34) in hero section. Photo renders correctly with proper aspect ratio (4:5) and styling. Tested and confirmed - professional executive portrait visible on both pages."
+
       - working: true
         agent: "testing"
         comment: "BACKEND INTEGRATION TEST: Site Settings edit and save tested. Changed tagline field, clicked Save button → PUT /api/admin/site returns 200 OK. Changes persist to MongoDB. Reloaded admin panel and verified tagline value persisted. Reverted to original value successfully. All site settings fields (site_name, tagline, email, phone, whatsapp, business_hours, address, footer_description, social links) editable and persist correctly."
@@ -384,15 +436,16 @@ frontend:
 
 metadata:
   created_by: "testing_agent"
-  version: "2.0"
-  test_sequence: 2
+  version: "2.1"
+  test_sequence: 3
   run_ui: true
   last_tested: "2026-07-05"
   backend_integration: true
+  latest_iteration: "Final verification - Admin password rotation, Calendly URL, Google Maps, Partner logos, Founder photo"
 
 test_plan:
   current_focus:
-    - "Backend integration testing completed successfully"
+    - "Final verification completed successfully - all new features working"
   stuck_tasks: []
   test_all: true
   test_priority: "high_first"
@@ -400,3 +453,5 @@ test_plan:
 agent_communication:
   - agent: "testing"
     message: "BACKEND INTEGRATION TESTING COMPLETED. All features now working with FastAPI + MongoDB backend (previously localStorage). Comprehensive testing performed: (1) All public pages load data from backend API - 15+ unique endpoints tested, (2) Contact and Proposal forms submit to backend and persist to MongoDB (201 Created), (3) JWT authentication working correctly with token storage and validation, (4) Admin CRUD operations (Create, Read, Update, Delete) all persist to MongoDB, (5) Status updates in inbox persist across page reloads, (6) Publish/unpublish toggle works correctly, (7) Logout clears JWT token, (8) Mobile responsive at 390px width, (9) All forms work on mobile. NO CRITICAL ISSUES FOUND. Email notifications are MOCKED (SMTP not configured). Design quality remains premium navy + gold. All previously working features still work with backend integration. Ready for production deployment."
+  - agent: "testing"
+    message: "FINAL VERIFICATION COMPLETED (2026-07-05). New features tested and verified: (1) Admin password rotation - OLD password 'demo1234' correctly rejected with 401, NEW password 'cNc260JXpQ7KNxVsz$K@i3bF' accepted and returns JWT token, (2) Site Settings new fields - 'Calendly URL' and 'Google Maps Embed URL' fields present and populated in database, (3) Calendly integration - 'Book a Meeting' button on Proposal page opens https://calendly.com/nn-venture/discovery in new tab, (4) Google Maps integration - Contact page displays embedded Google Maps iframe with Dhaka location, (5) Partner logos - Home page marquee displays 7 real partner logo images (Axiom Capital, Meridian & Co., Harbour Holdings, Northwind Group, Signal Ventures, Orchid Partners, Ridgeline Collective), (6) Founder photo - Executive portrait photo displayed on Home and Founder pages (dark navy blazer, professional setting). All regression tests passed - public forms, admin panel, ventures page all working correctly. NO CRITICAL ISSUES FOUND."

@@ -19,6 +19,8 @@ DEFAULTS = {
             "social_youtube": "#",
             "social_instagram": "#",
             "footer_description": "NN Venture is a founder-led corporate portfolio presenting venture initiatives, business capabilities, strategic collaboration opportunities, and impact-focused growth from Bangladesh.",
+            "calendly_url": "",
+            "map_embed_url": "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3651.9!2d90.4125!3d23.8103!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3755b8be6c0f1c95%3A0x0!2sDhaka%2C%20Bangladesh!5e0!3m2!1sen!2sbd",
         },
         "brand": {
             "primary": "#07111F",

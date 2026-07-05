@@ -273,6 +273,8 @@ const SitePanel = () => {
         <Field label="Facebook"><Input value={s.social_facebook || ''} onChange={(e) => setData({ ...s, social_facebook: e.target.value })} /></Field>
         <Field label="YouTube"><Input value={s.social_youtube || ''} onChange={(e) => setData({ ...s, social_youtube: e.target.value })} /></Field>
         <Field label="Instagram"><Input value={s.social_instagram || ''} onChange={(e) => setData({ ...s, social_instagram: e.target.value })} /></Field>
+        <div className="sm:col-span-2"><Field label="Calendly URL" help="Used for the 'Book a Meeting' button on Proposal & Contact pages."><Input value={s.calendly_url || ''} onChange={(e) => setData({ ...s, calendly_url: e.target.value })} placeholder="https://calendly.com/your-handle/discovery" /></Field></div>
+        <div className="sm:col-span-2"><Field label="Google Maps Embed URL" help="Paste the src URL from Google Maps → Share → Embed a map."><Input value={s.map_embed_url || ''} onChange={(e) => setData({ ...s, map_embed_url: e.target.value })} placeholder="https://www.google.com/maps/embed?pb=…" /></Field></div>
       </Card>
     </Section>
   );

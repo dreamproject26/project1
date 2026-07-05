@@ -105,12 +105,25 @@ const Contact = () => {
 
             <div className="relative overflow-hidden p-8 border border-accent/40 bg-primary text-primary-foreground rounded-sm">
               <p className="eyebrow-gold">Location</p>
-              <div className="mt-4 aspect-video rounded-sm overflow-hidden border border-white/10 bg-gradient-navy flex items-center justify-center">
-                <div className="text-center">
-                  <MapPin className="h-6 w-6 text-accent mx-auto" />
-                  <p className="mt-3 text-sm text-primary-foreground/80">{site?.address}</p>
-                  <p className="text-xs text-primary-foreground/50 mt-1">Map embed can be attached in admin</p>
-                </div>
+              <div className="mt-4 aspect-video rounded-sm overflow-hidden border border-white/10 bg-gradient-navy">
+                {site?.map_embed_url ? (
+                  <iframe
+                    title="Location"
+                    src={site.map_embed_url}
+                    className="w-full h-full border-0"
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                    allowFullScreen
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <div className="text-center">
+                      <MapPin className="h-6 w-6 text-accent mx-auto" />
+                      <p className="mt-3 text-sm text-primary-foreground/80">{site?.address}</p>
+                      <p className="text-xs text-primary-foreground/50 mt-1">Add a map embed URL from admin</p>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </aside>
