@@ -45,12 +45,12 @@ const Founder = () => {
             <span className="eyebrow-gold">Executive Biography</span>
             <div className="mt-6 space-y-5 text-lg text-foreground/85 leading-relaxed">
               <p>{founder.long_bio}</p>
-              <p>The founder's approach is rooted in disciplined execution, structured partnerships and a long-term operating horizon. Every venture in the portfolio is treated as a commitment — not a bet.</p>
+              <p>The founder&apos;s approach is rooted in disciplined execution, structured partnerships and a long-term operating horizon. Every venture in the portfolio is treated as a commitment — not a bet.</p>
             </div>
 
             <div className="mt-10 grid sm:grid-cols-2 gap-6">
               <div className="border-t border-accent/40 pt-4">
-                <p className="eyebrow-gold">Founder's Vision</p>
+                <p className="eyebrow-gold">Founder&apos;s Vision</p>
                 <p className="mt-3 text-foreground/85">{founder.vision}</p>
               </div>
               <div className="border-t border-accent/40 pt-4">
@@ -79,8 +79,12 @@ const Founder = () => {
             <div className="p-6 border border-border rounded-sm bg-card">
               <p className="eyebrow-gold">Social Profiles</p>
               <div className="mt-4 flex gap-3">
-                {[Linkedin, Twitter, Facebook].map((Icon, i) => (
-                  <a key={i} href="#" className="w-10 h-10 rounded-sm border border-border flex items-center justify-center hover:border-accent hover:text-accent transition-colors">
+                {[
+                  { key: 'linkedin', Icon: Linkedin },
+                  { key: 'twitter', Icon: Twitter },
+                  { key: 'facebook', Icon: Facebook },
+                ].map(({ key, Icon }) => (
+                  <a key={key} href={founder?.social?.[key] || '#'} aria-label={key} className="w-10 h-10 rounded-sm border border-border flex items-center justify-center hover:border-accent hover:text-accent transition-colors">
                     <Icon className="h-4 w-4" />
                   </a>
                 ))}

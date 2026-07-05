@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import {
   LayoutDashboard, Settings, User, Briefcase, Layers, FileText, Image as ImageIcon,
@@ -19,7 +19,9 @@ import {
   putSingleton, listAdmin, createItem, updateItem, deleteItem,
   uploadFile, listProposals, listContacts, setProposalStatus, setContactStatus,
   deleteProposal, deleteContact, resolveMedia,
+  getSite, getBrand, getFounder, getSeo,
 } from '@/lib/api';
+import { setAuthToken, clearAuthToken } from '@/lib/authStorage';
 
 const nav = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -44,8 +46,12 @@ const nav = [
 ];
 
 // ---------- Login ----------
+// SECURITY: no credentials are hardcoded. The email is pre-filled with the
+// public admin address only for convenience (visible in docs). The password
+// field is always empty and the token is stored via `setAuthToken` (see
+// `src/lib/authStorage.js` for the storage strategy).
 const Login = ({ onLogin }) => {
-  const [creds, setCreds] = useState({ email: 'admin@nnventure.com', password: 'demo1234' });
+  const [creds, setCreds] = useState({ email: 'admin@nnventure.com', password: '' });
   const [busy, setBusy] = useState(false);
 
   const submit = async (e) => {
@@ -53,7 +59,7 @@ const Login = ({ onLogin }) => {
     setBusy(true);
     try {
       const res = await apiLogin(creds.email, creds.password);
-      localStorage.setItem('nnv_token', res.access_token);
+      setAuthToken(res.access_token);
       toast.success('Welcome back');
       onLogin();
     } catch (err) {
@@ -103,7 +109,7 @@ const Login = ({ onLogin }) => {
           <Button type="submit" variant="gold" size="lg" className="w-full mt-8" disabled={busy}>
             {busy ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Signing in…</> : <>Enter Console <ArrowUpRight className="h-4 w-4 ml-1" /></>}
           </Button>
-          <p className="mt-4 text-xs text-primary-foreground/50">Demo credentials pre-filled — click Enter to explore the admin.</p>
+          <p className="mt-4 text-xs text-primary-foreground/50">Contact your administrator if you need access credentials.</p>
         </form>
       </div>
     </div>
@@ -210,20 +216,27 @@ const useSingleton = (key, initialLoad) => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const loadRef = useRef(initialLoad);
+  loadRef.current = initialLoad;
+
   useEffect(() => {
     let alive = true;
-    initialLoad().then(d => { if (alive) { setData(d || {}); setLoading(false); } }).catch(() => setLoading(false));
+    loadRef.current()
+      .then((d) => { if (alive) { setData(d || {}); setLoading(false); } })
+      .catch(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-  const save = async () => {
+  }, [key]);
+
+  const save = useCallback(async () => {
     setSaving(true);
     try {
       await putSingleton(key, data);
       toast.success('Saved');
-    } catch (err) { toast.error('Save failed', { description: err?.response?.data?.detail }); }
-    finally { setSaving(false); }
-  };
+    } catch (err) {
+      toast.error('Save failed', { description: err?.response?.data?.detail });
+    } finally { setSaving(false); }
+  }, [key, data]);
+
   return { data, setData, loading, saving, save };
 };
 
@@ -231,30 +244,48 @@ const useSingleton = (key, initialLoad) => {
 const useCollection = (name) => {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
-  const reload = async () => {
+
+  const reload = useCallback(async () => {
     setLoading(true);
-    try { const d = await listAdmin(name); setItems(d || []); } catch { }
+    try {
+      const d = await listAdmin(name);
+      setItems(d || []);
+    } catch { /* handled via toasts elsewhere */ }
     finally { setLoading(false); }
-  };
-  useEffect(() => { reload(); /* eslint-disable-next-line */ }, []);
-  const create = async (draft) => {
-    try { const created = await createItem(name, draft); setItems([created, ...items]); toast.success('Added'); return created; }
-    catch (err) { toast.error('Add failed', { description: err?.response?.data?.detail }); }
-  };
-  const update = async (id, patch) => {
-    try { const updated = await updateItem(name, id, patch); setItems(items.map(x => (x.id === id || x.slug === id) ? { ...x, ...updated } : x)); }
-    catch (err) { toast.error('Save failed', { description: err?.response?.data?.detail }); }
-  };
-  const remove = async (id) => {
-    try { await deleteItem(name, id); setItems(items.filter(x => x.id !== id && x.slug !== id)); toast.success('Removed'); }
-    catch (err) { toast.error('Remove failed', { description: err?.response?.data?.detail }); }
-  };
+  }, [name]);
+
+  useEffect(() => { reload(); }, [reload]);
+
+  const create = useCallback(async (draft) => {
+    try {
+      const created = await createItem(name, draft);
+      setItems((prev) => [created, ...prev]);
+      toast.success('Added');
+      return created;
+    } catch (err) { toast.error('Add failed', { description: err?.response?.data?.detail }); }
+  }, [name]);
+
+  const update = useCallback(async (id, patch) => {
+    try {
+      const updated = await updateItem(name, id, patch);
+      setItems((prev) => prev.map((x) => (x.id === id || x.slug === id) ? { ...x, ...updated } : x));
+    } catch (err) { toast.error('Save failed', { description: err?.response?.data?.detail }); }
+  }, [name]);
+
+  const remove = useCallback(async (id) => {
+    try {
+      await deleteItem(name, id);
+      setItems((prev) => prev.filter((x) => x.id !== id && x.slug !== id));
+      toast.success('Removed');
+    } catch (err) { toast.error('Remove failed', { description: err?.response?.data?.detail }); }
+  }, [name]);
+
   return { items, setItems, loading, reload, create, update, remove };
 };
 
 // ---------- Panels ----------
 const SitePanel = () => {
-  const { data, setData, loading, saving, save } = useSingleton('site', () => import('@/lib/api').then(m => m.getSite()));
+  const { data, setData, loading, saving, save } = useSingleton('site', getSite);
   if (loading || !data) return <Empty icon={Loader2} title="Loading…" />;
   const s = data;
   return (
@@ -281,7 +312,7 @@ const SitePanel = () => {
 };
 
 const BrandPanel = () => {
-  const { data, setData, loading, saving, save } = useSingleton('brand', () => import('@/lib/api').then(m => m.getBrand()));
+  const { data, setData, loading, saving, save } = useSingleton('brand', getBrand);
   if (loading || !data) return <Empty icon={Loader2} title="Loading…" />;
   const b = data;
   return (
@@ -299,7 +330,7 @@ const BrandPanel = () => {
 };
 
 const FounderPanel = () => {
-  const { data, setData, loading, saving, save } = useSingleton('founder', () => import('@/lib/api').then(m => m.getFounder()));
+  const { data, setData, loading, saving, save } = useSingleton('founder', getFounder);
   if (loading || !data) return <Empty icon={Loader2} title="Loading…" />;
   const f = data;
   const setArr = (key, str) => setData({ ...f, [key]: str.split(/\n+/).map(s => s.trim()).filter(Boolean) });
@@ -322,7 +353,7 @@ const FounderPanel = () => {
 };
 
 const SeoPanel = () => {
-  const { data, setData, loading, saving, save } = useSingleton('seo', () => import('@/lib/api').then(m => m.getSeo()));
+  const { data, setData, loading, saving, save } = useSingleton('seo', getSeo);
   if (loading || !data) return <Empty icon={Loader2} title="Loading…" />;
   return (
     <Section title="SEO Settings" description="Per-page metadata." action={<Button variant="gold" onClick={save} disabled={saving}><Save className="h-4 w-4 mr-1" /> {saving ? 'Saving…' : 'Save'}</Button>}>
@@ -381,29 +412,33 @@ const ListEditor = ({ name, title, description, columns, defaultDraft, keyField 
 const InboxPanel = ({ kind = 'proposals' }) => {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
-  const reload = async () => {
+
+  const reload = useCallback(async () => {
     setLoading(true);
     try {
       const d = kind === 'proposals' ? await listProposals() : await listContacts();
       setItems(d || []);
     } finally { setLoading(false); }
-  };
-  useEffect(() => { reload(); /* eslint-disable-next-line */ }, [kind]);
+  }, [kind]);
 
-  const setStatus = async (id, status) => {
+  useEffect(() => { reload(); }, [reload]);
+
+  const setStatus = useCallback(async (id, status) => {
     try {
       if (kind === 'proposals') await setProposalStatus(id, status);
       else await setContactStatus(id, status);
-      setItems(items.map(x => x.id === id ? { ...x, status } : x));
-    } catch (err) { toast.error('Update failed'); }
-  };
-  const remove = async (id) => {
+      setItems((prev) => prev.map((x) => x.id === id ? { ...x, status } : x));
+    } catch { toast.error('Update failed'); }
+  }, [kind]);
+
+  const remove = useCallback(async (id) => {
     try {
-      if (kind === 'proposals') await deleteProposal(id); else await deleteContact(id);
-      setItems(items.filter(x => x.id !== id));
+      if (kind === 'proposals') await deleteProposal(id);
+      else await deleteContact(id);
+      setItems((prev) => prev.filter((x) => x.id !== id));
       toast.success('Removed');
     } catch { toast.error('Delete failed'); }
-  };
+  }, [kind]);
 
   const title = kind === 'proposals' ? 'Proposal Inbox' : 'Contact Messages';
   if (loading) return <Empty icon={Loader2} title="Loading…" />;
@@ -457,16 +492,20 @@ const InboxPanel = ({ kind = 'proposals' }) => {
 const Dashboard = ({ setTab }) => {
   const [stats, setStats] = useState({ ventures: 0, services: 0, proposals: 0, contacts: 0 });
   const [recent, setRecent] = useState([]);
+
   useEffect(() => {
+    let alive = true;
     Promise.all([
       listAdmin('ventures').catch(() => []),
       listAdmin('services').catch(() => []),
       listProposals().catch(() => []),
       listContacts().catch(() => []),
     ]).then(([v, s, p, c]) => {
+      if (!alive) return;
       setStats({ ventures: v.length, services: s.length, proposals: p.length, contacts: c.length });
       setRecent(p.slice(0, 4));
     });
+    return () => { alive = false; };
   }, []);
   const cards = [
     { label: 'Ventures', value: stats.ventures, icon: Briefcase },
@@ -540,13 +579,22 @@ const Admin = () => {
   const [tab, setTab] = useState('dashboard');
 
   useEffect(() => {
-    apiMe().then(() => setAuthed(true)).catch(() => setAuthed(false)).finally(() => setChecking(false));
+    let alive = true;
+    apiMe()
+      .then(() => { if (alive) setAuthed(true); })
+      .catch(() => { if (alive) setAuthed(false); })
+      .finally(() => { if (alive) setChecking(false); });
+    return () => { alive = false; };
+  }, []);
+
+  const logout = useCallback(() => {
+    clearAuthToken();
+    setAuthed(false);
+    toast('Signed out');
   }, []);
 
   if (checking) return <div className="min-h-screen bg-primary flex items-center justify-center text-primary-foreground"><Loader2 className="h-6 w-6 animate-spin text-accent" /></div>;
   if (!authed) return <Login onLogin={() => setAuthed(true)} />;
-
-  const logout = () => { localStorage.removeItem('nnv_token'); setAuthed(false); toast('Signed out'); };
 
   const renderTab = () => {
     switch (tab) {

@@ -138,7 +138,7 @@ const Proposal = () => {
                 </Button>
                 <a href={site?.whatsapp ? `https://wa.me/${(site.whatsapp || '').replace(/[^0-9]/g, '')}` : '#'} target="_blank" rel="noreferrer">
                   <Button variant="outline" className="w-full">
-                    <MessageCircle className="h-4 w-4 mr-2" /> WhatsApp Founder's Office
+                    <MessageCircle className="h-4 w-4 mr-2" /> WhatsApp Founder&apos;s Office
                   </Button>
                 </a>
               </div>

@@ -44,7 +44,7 @@ const Contact = () => {
         </div>
         <div className="relative container-executive">
           <span className="eyebrow-gold">Contact</span>
-          <h1 className="mt-6 font-display font-semibold text-4xl sm:text-5xl lg:text-6xl leading-[1.05] max-w-4xl">Talk to the founder's office.</h1>
+          <h1 className="mt-6 font-display font-semibold text-4xl sm:text-5xl lg:text-6xl leading-[1.05] max-w-4xl">Talk to the founder&apos;s office.</h1>
           <p className="mt-6 text-lg text-primary-foreground/75 max-w-2xl">For business proposals, partnerships, media inquiries or general communication.</p>
         </div>
       </section>
@@ -71,7 +71,7 @@ const Contact = () => {
 
           <aside className="lg:col-span-5 space-y-6">
             <div className="p-8 border border-border rounded-sm bg-card">
-              <p className="eyebrow-gold">Founder's Office</p>
+              <p className="eyebrow-gold">Founder&apos;s Office</p>
               <div className="mt-6 space-y-5">
                 {details.map(({ icon: Icon, label, value }) => (
                   <div key={label} className="flex items-start gap-4">
@@ -91,12 +91,12 @@ const Contact = () => {
               <p className="eyebrow-gold">Social</p>
               <div className="mt-6 flex gap-3">
                 {[
-                  { Icon: Linkedin, href: site?.social_linkedin || '#' },
-                  { Icon: Facebook, href: site?.social_facebook || '#' },
-                  { Icon: Youtube, href: site?.social_youtube || '#' },
-                  { Icon: Instagram, href: site?.social_instagram || '#' },
-                ].map(({ Icon, href }, i) => (
-                  <a key={i} href={href} target="_blank" rel="noreferrer" className="w-10 h-10 rounded-sm border border-border flex items-center justify-center hover:border-accent hover:text-accent transition-colors">
+                  { key: 'linkedin', Icon: Linkedin, href: site?.social_linkedin || '#' },
+                  { key: 'facebook', Icon: Facebook, href: site?.social_facebook || '#' },
+                  { key: 'youtube', Icon: Youtube, href: site?.social_youtube || '#' },
+                  { key: 'instagram', Icon: Instagram, href: site?.social_instagram || '#' },
+                ].map(({ key, Icon, href }) => (
+                  <a key={key} href={href} aria-label={key} target="_blank" rel="noreferrer" className="w-10 h-10 rounded-sm border border-border flex items-center justify-center hover:border-accent hover:text-accent transition-colors">
                     <Icon className="h-4 w-4" />
                   </a>
                 ))}

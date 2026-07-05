@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { getAuthToken, clearAuthToken } from './authStorage';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 export const API_BASE = `${BACKEND_URL}/api`;
@@ -6,7 +7,7 @@ export const API_BASE = `${BACKEND_URL}/api`;
 export const api = axios.create({ baseURL: API_BASE, timeout: 20000 });
 
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('nnv_token');
+  const token = getAuthToken();
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
@@ -15,7 +16,7 @@ api.interceptors.response.use(
   (res) => res,
   (err) => {
     if (err?.response?.status === 401 && window.location.pathname.startsWith('/admin')) {
-      localStorage.removeItem('nnv_token');
+      clearAuthToken();
     }
     return Promise.reject(err);
   }

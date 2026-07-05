@@ -45,7 +45,7 @@ const Services = () => {
                   <p className="mt-2 text-sm text-muted-foreground">Founder-supervised engagement</p>
                 </div>
                 <div className="md:col-span-7 grid sm:grid-cols-3 gap-6">
-                  <div><p className="eyebrow-gold">Who it's for</p><p className="mt-2 text-sm text-foreground/85">{s.who}</p></div>
+                  <div><p className="eyebrow-gold">Who it&apos;s for</p><p className="mt-2 text-sm text-foreground/85">{s.who}</p></div>
                   <div><p className="eyebrow-gold">What we provide</p><p className="mt-2 text-sm text-foreground/85">{s.we}</p></div>
                   <div><p className="eyebrow-gold">Expected outcome</p><p className="mt-2 text-sm text-foreground/85">{s.outcome}</p></div>
                   <div className="sm:col-span-3 mt-2">

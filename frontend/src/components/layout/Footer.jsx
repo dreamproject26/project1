@@ -74,8 +74,13 @@ const Footer = () => {
               <Link to="/proposal">Request Business Proposal <ArrowUpRight className="h-4 w-4 ml-1" /></Link>
             </Button>
             <div className="flex items-center gap-4 mt-8">
-              {[Linkedin, Facebook, Youtube, Instagram].map((Icon, i) => (
-                <a key={i} href="#" className="w-9 h-9 rounded-full border border-accent/30 flex items-center justify-center text-accent hover:bg-accent hover:text-accent-foreground transition-colors">
+              {[
+                { key: 'linkedin', Icon: Linkedin, href: s.social_linkedin || '#' },
+                { key: 'facebook', Icon: Facebook, href: s.social_facebook || '#' },
+                { key: 'youtube', Icon: Youtube, href: s.social_youtube || '#' },
+                { key: 'instagram', Icon: Instagram, href: s.social_instagram || '#' },
+              ].map(({ key, Icon, href }) => (
+                <a key={key} href={href} aria-label={key} target="_blank" rel="noreferrer" className="w-9 h-9 rounded-full border border-accent/30 flex items-center justify-center text-accent hover:bg-accent hover:text-accent-foreground transition-colors">
                   <Icon className="h-4 w-4" />
                 </a>
               ))}
