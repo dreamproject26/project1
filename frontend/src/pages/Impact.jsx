@@ -4,7 +4,9 @@ import { ArrowUpRight, TrendingUp, Users, Globe, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SectionHeader } from '@/components/common/SectionHeader';
 import { EditableBadge } from '@/components/common/EditableBadge';
-import { impactMetrics, impactStories, secondaryHero } from '@/data/mockData';
+import { useMulti, PageLoader } from '@/lib/useFetch';
+import { getMetrics, getStories } from '@/lib/api';
+import { secondaryHero } from '@/data/mockData';
 
 const categories = [
   { icon: TrendingUp, label: 'Business Impact' },
@@ -14,6 +16,10 @@ const categories = [
 ];
 
 const Impact = () => {
+  const { data, loading } = useMulti({ metrics: getMetrics, stories: getStories });
+  if (loading || !data) return <div className="pt-32"><PageLoader /></div>;
+  const { metrics, stories } = data;
+
   return (
     <div>
       <section className="relative pt-32 pb-20 md:pt-40 md:pb-24 bg-primary text-primary-foreground overflow-hidden">
@@ -23,19 +29,15 @@ const Impact = () => {
         </div>
         <div className="relative container-executive">
           <span className="eyebrow-gold">Impact</span>
-          <h1 className="mt-6 font-display font-semibold text-4xl sm:text-5xl lg:text-6xl leading-[1.05] max-w-4xl">
-            Reported. Verified. Editable.
-          </h1>
-          <p className="mt-6 text-lg text-primary-foreground/75 max-w-2xl">
-            NN Venture reports only what is verifiable. Every metric below is editable from the admin panel until proof is attached.
-          </p>
+          <h1 className="mt-6 font-display font-semibold text-4xl sm:text-5xl lg:text-6xl leading-[1.05] max-w-4xl">Reported. Verified. Editable.</h1>
+          <p className="mt-6 text-lg text-primary-foreground/75 max-w-2xl">NN Venture reports only what is verifiable. Every metric below is editable from the admin panel until proof is attached.</p>
         </div>
       </section>
 
       <section className="py-20 bg-background">
         <div className="container-executive grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {impactMetrics.map((m, i) => (
-            <div key={m.label} className="p-6 border border-border rounded-sm bg-card">
+          {metrics.map((m, i) => (
+            <div key={m.id || m.label} className="p-6 border border-border rounded-sm bg-card">
               <p className="text-[10px] tracking-[0.22em] uppercase text-accent">Metric 0{i + 1}</p>
               <p className="mt-4 font-display font-semibold text-4xl text-foreground">{m.value}</p>
               <p className="mt-2 text-sm text-muted-foreground">{m.label}</p>
@@ -63,26 +65,17 @@ const Impact = () => {
         <div className="container-executive">
           <SectionHeader eyebrow="Impact Stories" title="Structured, editable and defensible." className="max-w-2xl" />
           <div className="mt-14 space-y-6">
-            {impactStories.map((s) => (
-              <div key={s.title} className="grid md:grid-cols-12 gap-6 p-8 border border-border rounded-sm bg-card card-hover">
+            {stories.map((s) => (
+              <div key={s.id || s.title} className="grid md:grid-cols-12 gap-6 p-8 border border-border rounded-sm bg-card card-hover">
                 <div className="md:col-span-3">
                   <p className="eyebrow-gold">{s.category}</p>
                   <p className="mt-4 font-display font-semibold text-2xl">{s.title}</p>
                   <div className="mt-4"><EditableBadge label={s.proof} /></div>
                 </div>
                 <div className="md:col-span-9 grid sm:grid-cols-3 gap-6">
-                  <div>
-                    <p className="eyebrow-gold">Challenge</p>
-                    <p className="mt-2 text-sm text-foreground/85">{s.challenge}</p>
-                  </div>
-                  <div>
-                    <p className="eyebrow-gold">Action</p>
-                    <p className="mt-2 text-sm text-foreground/85">{s.action}</p>
-                  </div>
-                  <div>
-                    <p className="eyebrow-gold">Outcome</p>
-                    <p className="mt-2 text-sm text-foreground/85">{s.outcome}</p>
-                  </div>
+                  <div><p className="eyebrow-gold">Challenge</p><p className="mt-2 text-sm text-foreground/85">{s.challenge}</p></div>
+                  <div><p className="eyebrow-gold">Action</p><p className="mt-2 text-sm text-foreground/85">{s.action}</p></div>
+                  <div><p className="eyebrow-gold">Outcome</p><p className="mt-2 text-sm text-foreground/85">{s.outcome}</p></div>
                 </div>
               </div>
             ))}

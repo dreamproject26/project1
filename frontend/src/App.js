@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Toaster } from '@/components/ui/sonner';
+import { SiteProvider } from '@/lib/siteContext';
 import Layout from '@/components/layout/Layout';
 import Home from '@/pages/Home';
 import About from '@/pages/About';
@@ -22,26 +23,28 @@ import './App.css';
 function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route element={<Layout />}>
-          <Route path="/" element={<Home />} />
-          <Route path="/about" element={<About />} />
-          <Route path="/founder" element={<Founder />} />
-          <Route path="/ventures" element={<Ventures />} />
-          <Route path="/ventures/:slug" element={<VentureDetail />} />
-          <Route path="/services" element={<Services />} />
-          <Route path="/impact" element={<Impact />} />
-          <Route path="/journey" element={<Journey />} />
-          <Route path="/proposal" element={<Proposal />} />
-          <Route path="/media" element={<Media />} />
-          <Route path="/contact" element={<Contact />} />
-          <Route path="/privacy" element={<Privacy />} />
-          <Route path="/terms" element={<Terms />} />
-          <Route path="*" element={<NotFound />} />
-        </Route>
-        <Route path="/admin" element={<Admin />} />
-      </Routes>
-      <Toaster richColors position="top-right" />
+      <SiteProvider>
+        <Routes>
+          <Route element={<Layout />}>
+            <Route path="/" element={<Home />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/founder" element={<Founder />} />
+            <Route path="/ventures" element={<Ventures />} />
+            <Route path="/ventures/:slug" element={<VentureDetail />} />
+            <Route path="/services" element={<Services />} />
+            <Route path="/impact" element={<Impact />} />
+            <Route path="/journey" element={<Journey />} />
+            <Route path="/proposal" element={<Proposal />} />
+            <Route path="/media" element={<Media />} />
+            <Route path="/contact" element={<Contact />} />
+            <Route path="/privacy" element={<Privacy />} />
+            <Route path="/terms" element={<Terms />} />
+            <Route path="*" element={<NotFound />} />
+          </Route>
+          <Route path="/admin" element={<Admin />} />
+        </Routes>
+        <Toaster richColors position="top-right" />
+      </SiteProvider>
     </BrowserRouter>
   );
 }

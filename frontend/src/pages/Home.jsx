@@ -1,21 +1,36 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowUpRight, ArrowDown, Compass, Cpu, ShoppingBag, Sprout, Building2, GraduationCap, Users, Star, Quote, Download, ChevronRight, Sparkles } from 'lucide-react';
+import { ArrowUpRight, ArrowDown, Compass, Cpu, ShoppingBag, Sprout, Building2, GraduationCap, Users, Quote, Download, ChevronRight, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { SectionHeader } from '@/components/common/SectionHeader';
 import { EditableBadge } from '@/components/common/EditableBadge';
-import {
-  heroImage, secondaryHero, goldTexture, architectureImg,
-  heroMetrics, businessVerticals, ventures, services, testimonials,
-  brandValues, impactMetrics, journey, partners, founder,
-} from '@/data/mockData';
+import { useMulti, PageLoader } from '@/lib/useFetch';
+import { resolveMedia, getHeroMetrics, getVerticals, getVentures, getServices, getMetrics, getJourney, getTestimonials, getPartners, getBrandValues } from '@/lib/api';
+import { useSite } from '@/lib/siteContext';
+import { heroImage, goldTexture, architectureImg } from '@/data/mockData';
 
 const iconMap = { Cpu, ShoppingBag, Sprout, Building2, GraduationCap, Users };
 
 const Home = () => {
+  const { founder } = useSite();
+  const { data, loading } = useMulti({
+    heroMetrics: getHeroMetrics,
+    verticals: getVerticals,
+    ventures: getVentures,
+    services: getServices,
+    metrics: getMetrics,
+    journey: getJourney,
+    testimonials: getTestimonials,
+    partners: getPartners,
+    brandValues: getBrandValues,
+  });
+
+  if (loading || !data) return <div className="pt-32"><PageLoader label="Loading portfolio…" /></div>;
+  const { heroMetrics, verticals, ventures, services, metrics, journey, testimonials, partners, brandValues } = data;
+
   return (
     <div className="overflow-hidden">
       {/* HERO */}
@@ -57,11 +72,11 @@ const Home = () => {
               <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.8, delay: 0.2 }}
                 className="border border-accent/20 bg-primary/60 backdrop-blur-md p-6 rounded-sm">
                 <p className="text-[11px] tracking-[0.22em] uppercase text-accent">The Founder</p>
-                <p className="mt-4 font-display text-2xl text-primary-foreground">{founder.full_name}</p>
-                <p className="text-primary-foreground/70 text-sm mt-1">{founder.designation}</p>
+                <p className="mt-4 font-display text-2xl text-primary-foreground">{founder?.full_name || '[Founder Name]'}</p>
+                <p className="text-primary-foreground/70 text-sm mt-1">{founder?.designation || 'Founder & Lead Strategist'}</p>
                 <div className="mt-5 pt-5 border-t border-white/10">
                   <p className="text-sm text-primary-foreground/80 leading-relaxed">
-                    “{founder.leadership_philosophy}”
+                    “{founder?.leadership_philosophy || 'Lead with clarity, operate with discipline, partner with intent.'}”
                   </p>
                 </div>
                 <Link to="/founder" className="mt-6 inline-flex items-center gap-2 text-accent text-sm link-underline">
@@ -85,10 +100,8 @@ const Home = () => {
         <div className="container-executive py-12">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 lg:gap-10">
             {heroMetrics.map((m, i) => (
-              <div key={m.label} className={i > 0 ? 'md:border-l md:border-white/10 md:pl-8' : ''}>
-                <p className="font-display font-semibold text-4xl md:text-5xl text-primary-foreground tracking-tight">
-                  {m.value}
-                </p>
+              <div key={m.id || m.label} className={i > 0 ? 'md:border-l md:border-white/10 md:pl-8' : ''}>
+                <p className="font-display font-semibold text-4xl md:text-5xl text-primary-foreground tracking-tight">{m.value}</p>
                 <p className="mt-2 text-[13px] text-primary-foreground/75">{m.label}</p>
                 <p className="text-[10px] tracking-[0.14em] uppercase text-accent/70 mt-1">{m.note}</p>
               </div>
@@ -106,12 +119,8 @@ const Home = () => {
               title={<>A founder-led venture platform — built to be <span className="font-serif-editorial italic text-accent">credible</span>, structured, and long-term.</>}
             />
             <div className="mt-8 flex items-center gap-4">
-              <Button asChild variant="default" size="lg">
-                <Link to="/about">About the Portfolio</Link>
-              </Button>
-              <Button asChild variant="ghost" size="lg" className="text-foreground">
-                <Link to="/founder">Founder →</Link>
-              </Button>
+              <Button asChild variant="default" size="lg"><Link to="/about">About the Portfolio</Link></Button>
+              <Button asChild variant="ghost" size="lg" className="text-foreground"><Link to="/founder">Founder →</Link></Button>
             </div>
           </div>
           <div className="lg:col-span-7 space-y-6">
@@ -145,7 +154,7 @@ const Home = () => {
         <div className="relative container-executive grid lg:grid-cols-12 gap-12 items-center">
           <div className="lg:col-span-5">
             <div className="relative aspect-[4/5] rounded-sm overflow-hidden border border-accent/20">
-              <img src={founder.photo_url} alt="Founder" className="w-full h-full object-cover" />
+              <img src={resolveMedia(founder?.photo_url)} alt="Founder" className="w-full h-full object-cover" />
               <div className="absolute inset-0 bg-gradient-to-t from-primary/70 to-transparent" />
               <div className="absolute bottom-6 left-6 right-6">
                 <EditableBadge label="Founder photo — upload from admin" />
@@ -154,34 +163,26 @@ const Home = () => {
           </div>
           <div className="lg:col-span-7">
             <span className="eyebrow-gold">The Founder</span>
-            <h2 className="font-display font-semibold text-3xl md:text-5xl mt-4 leading-tight text-secondary-foreground">
-              {founder.full_name}
-            </h2>
-            <p className="mt-2 text-accent tracking-tight">{founder.designation}</p>
-            <p className="mt-6 text-secondary-foreground/80 text-lg leading-relaxed max-w-2xl">
-              {founder.long_bio}
-            </p>
+            <h2 className="font-display font-semibold text-3xl md:text-5xl mt-4 leading-tight text-secondary-foreground">{founder?.full_name || '[Founder Name]'}</h2>
+            <p className="mt-2 text-accent tracking-tight">{founder?.designation || 'Founder & Lead Strategist'}</p>
+            <p className="mt-6 text-secondary-foreground/80 text-lg leading-relaxed max-w-2xl">{founder?.long_bio}</p>
             <div className="mt-8 grid sm:grid-cols-2 gap-6">
               <div>
                 <p className="text-[11px] tracking-[0.22em] uppercase text-accent mb-3">Core Expertise</p>
                 <ul className="space-y-2 text-sm text-secondary-foreground/85">
-                  {founder.expertise.slice(0, 4).map((e) => (
+                  {(founder?.expertise || []).slice(0, 4).map((e) => (
                     <li key={e} className="flex items-center gap-2"><span className="h-1 w-1 rounded-full bg-accent" /> {e}</li>
                   ))}
                 </ul>
               </div>
               <div>
                 <p className="text-[11px] tracking-[0.22em] uppercase text-accent mb-3">Leadership Philosophy</p>
-                <p className="text-sm italic text-secondary-foreground/85 leading-relaxed">“{founder.leadership_philosophy}”</p>
+                <p className="text-sm italic text-secondary-foreground/85 leading-relaxed">“{founder?.leadership_philosophy}”</p>
               </div>
             </div>
             <div className="mt-10 flex gap-4">
-              <Button asChild variant="gold">
-                <Link to="/founder">Full Founder Profile <ArrowUpRight className="h-4 w-4 ml-1" /></Link>
-              </Button>
-              <Button asChild variant="outline-light">
-                <Link to="/proposal"><Download className="h-4 w-4 mr-1" /> Founder Profile PDF</Link>
-              </Button>
+              <Button asChild variant="gold"><Link to="/founder">Full Founder Profile <ArrowUpRight className="h-4 w-4 ml-1" /></Link></Button>
+              <Button asChild variant="outline-light"><Link to="/proposal"><Download className="h-4 w-4 mr-1" /> Founder Profile PDF</Link></Button>
             </div>
           </div>
         </div>
@@ -191,22 +192,16 @@ const Home = () => {
       <section className="py-24 md:py-32 bg-background">
         <div className="container-executive">
           <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-8 mb-14">
-            <SectionHeader
-              eyebrow="Business Verticals"
-              title="A structured portfolio across sectors that matter."
-              className="max-w-2xl"
-            />
-            <Button asChild variant="outline">
-              <Link to="/ventures">All Ventures <ChevronRight className="h-4 w-4 ml-1" /></Link>
-            </Button>
+            <SectionHeader eyebrow="Business Verticals" title="A structured portfolio across sectors that matter." className="max-w-2xl" />
+            <Button asChild variant="outline"><Link to="/ventures">All Ventures <ChevronRight className="h-4 w-4 ml-1" /></Link></Button>
           </div>
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {businessVerticals.map((v, i) => {
+            {verticals.map((v, i) => {
               const Icon = iconMap[v.icon] || Compass;
               return (
                 <motion.div
-                  key={v.title}
+                  key={v.id || v.title}
                   initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }} transition={{ duration: 0.5, delay: i * 0.05 }}
                   className="group relative flex flex-col p-8 border border-border rounded-sm bg-card card-hover"
@@ -246,7 +241,7 @@ const Home = () => {
                 className="group flex flex-col bg-card border border-border rounded-sm overflow-hidden card-hover"
               >
                 <div className="relative aspect-[4/3] overflow-hidden bg-primary">
-                  <img src={v.image} alt={v.name} className="w-full h-full object-cover opacity-90 group-hover:scale-105 transition-transform duration-700" />
+                  <img src={resolveMedia(v.image)} alt={v.name} className="w-full h-full object-cover opacity-90 group-hover:scale-105 transition-transform duration-700" />
                   <div className="absolute inset-0 bg-gradient-to-t from-primary/80 via-primary/20 to-transparent" />
                   <div className="absolute top-4 left-4 flex gap-2">
                     <Badge variant="outline" className="border-accent/50 text-accent bg-primary/60 backdrop-blur">{v.status}</Badge>
@@ -272,9 +267,7 @@ const Home = () => {
           </div>
 
           <div className="mt-12 flex justify-center">
-            <Button asChild variant="default" size="lg">
-              <Link to="/ventures">View Full Portfolio <ArrowUpRight className="h-4 w-4 ml-1" /></Link>
-            </Button>
+            <Button asChild variant="default" size="lg"><Link to="/ventures">View Full Portfolio <ArrowUpRight className="h-4 w-4 ml-1" /></Link></Button>
           </div>
         </div>
       </section>
@@ -296,16 +289,14 @@ const Home = () => {
                 <p className="mt-4 font-display font-semibold text-xl text-foreground">{s.title}</p>
                 <p className="mt-3 text-sm text-muted-foreground leading-relaxed">{s.we}</p>
                 <div className="mt-auto pt-6 flex items-center justify-between border-t border-border">
-                  <span className="text-xs text-muted-foreground">For {s.who.split(' ')[0].toLowerCase()}…</span>
+                  <span className="text-xs text-muted-foreground">For {(s.who || '').split(' ')[0].toLowerCase()}…</span>
                   <Link to="/services" className="text-xs text-foreground link-underline">Explore</Link>
                 </div>
               </div>
             ))}
           </div>
           <div className="mt-12 text-center">
-            <Button asChild variant="default" size="lg">
-              <Link to="/services">All Services & Collaboration Areas</Link>
-            </Button>
+            <Button asChild variant="default" size="lg"><Link to="/services">All Services & Collaboration Areas</Link></Button>
           </div>
         </div>
       </section>
@@ -329,8 +320,8 @@ const Home = () => {
           </div>
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {impactMetrics.map((m, i) => (
-              <div key={m.label} className="relative border border-white/10 bg-primary-foreground/[0.03] p-6 rounded-sm hover:border-accent/50 transition-colors">
+            {metrics.map((m, i) => (
+              <div key={m.id || m.label} className="relative border border-white/10 bg-primary-foreground/[0.03] p-6 rounded-sm hover:border-accent/50 transition-colors">
                 <p className="text-[10px] tracking-[0.22em] uppercase text-accent">0{i + 1}</p>
                 <p className="mt-4 font-display font-semibold text-4xl text-primary-foreground">{m.value}</p>
                 <p className="mt-2 text-sm text-primary-foreground/80">{m.label}</p>
@@ -340,12 +331,8 @@ const Home = () => {
           </div>
 
           <div className="mt-12 flex flex-wrap gap-4">
-            <Button asChild variant="gold" size="lg">
-              <Link to="/impact">Explore Impact <ArrowUpRight className="h-4 w-4 ml-1" /></Link>
-            </Button>
-            <Button asChild variant="outline-light" size="lg">
-              <Link to="/journey">See the Journey</Link>
-            </Button>
+            <Button asChild variant="gold" size="lg"><Link to="/impact">Explore Impact <ArrowUpRight className="h-4 w-4 ml-1" /></Link></Button>
+            <Button asChild variant="outline-light" size="lg"><Link to="/journey">See the Journey</Link></Button>
           </div>
         </div>
       </section>
@@ -353,18 +340,14 @@ const Home = () => {
       {/* JOURNEY PREVIEW */}
       <section className="py-24 md:py-32 bg-background">
         <div className="container-executive">
-          <SectionHeader
-            eyebrow="Journey"
-            title="A decade of building, coordinating, and structuring."
-            className="max-w-2xl"
-          />
+          <SectionHeader eyebrow="Journey" title="A decade of building, coordinating, and structuring." className="max-w-2xl" />
           <div className="mt-14 relative">
             <div className="absolute left-4 md:left-1/2 md:-translate-x-1/2 top-0 bottom-0 w-px bg-border" />
             <div className="space-y-10">
               {journey.slice(-5).map((j, i) => {
                 const isEven = i % 2 === 0;
                 return (
-                  <div key={j.year} className={`relative grid md:grid-cols-2 gap-6 md:gap-14 pl-12 md:pl-0`}>
+                  <div key={j.id || j.year} className="relative grid md:grid-cols-2 gap-6 md:gap-14 pl-12 md:pl-0">
                     <div className={`md:pr-12 ${isEven ? 'md:text-right' : 'md:col-start-2 md:pl-12 md:pr-0'}`}>
                       <p className="text-[11px] tracking-[0.22em] uppercase text-accent">{j.year}</p>
                       <p className="mt-2 font-display font-semibold text-2xl text-foreground">{j.title}</p>
@@ -378,9 +361,7 @@ const Home = () => {
             </div>
           </div>
           <div className="mt-12 text-center">
-            <Button asChild variant="outline">
-              <Link to="/journey">View Full Timeline</Link>
-            </Button>
+            <Button asChild variant="outline"><Link to="/journey">View Full Timeline</Link></Button>
           </div>
         </div>
       </section>
@@ -396,7 +377,7 @@ const Home = () => {
           />
           <div className="mt-14 grid md:grid-cols-2 gap-6">
             {testimonials.map((t, i) => (
-              <div key={i} className="flex flex-col p-8 md:p-10 bg-card border border-border rounded-sm card-hover">
+              <div key={t.id || i} className="flex flex-col p-8 md:p-10 bg-card border border-border rounded-sm card-hover">
                 <Quote className="h-6 w-6 text-accent" />
                 <p className="mt-6 text-lg leading-relaxed text-foreground/90 font-serif-editorial">“{t.quote}”</p>
                 <div className="mt-auto pt-6 border-t border-border flex items-center justify-between">
@@ -415,8 +396,8 @@ const Home = () => {
             <div className="marquee">
               <div className="marquee-track">
                 {[...partners, ...partners].map((p, i) => (
-                  <div key={i} className="flex items-center h-16 px-8 border border-border rounded-sm bg-card min-w-[180px] justify-center text-sm text-muted-foreground">
-                    {p}
+                  <div key={i} className="flex items-center h-16 px-8 border border-border rounded-sm bg-card min-w-[180px] justify-center text-sm text-muted-foreground gap-3">
+                    {p.logo_url ? <img src={resolveMedia(p.logo_url)} alt={p.name} className="h-8 max-w-[120px] object-contain" /> : <span>{p.name}</span>}
                   </div>
                 ))}
               </div>
@@ -440,8 +421,8 @@ const Home = () => {
           </Card>
           <Card className="relative overflow-hidden border-accent/30 bg-accent/[0.06] p-10 rounded-sm flex flex-col">
             <span className="eyebrow-gold">Business Proposal</span>
-            <h3 className="font-display font-semibold text-3xl mt-4 leading-tight text-foreground">Have a proposal in mind? Let’s talk.</h3>
-            <p className="mt-4 text-muted-foreground max-w-md">Whether it’s partnership, investment or venture collaboration — we respond with structure and clarity.</p>
+            <h3 className="font-display font-semibold text-3xl mt-4 leading-tight text-foreground">Have a proposal in mind? Let's talk.</h3>
+            <p className="mt-4 text-muted-foreground max-w-md">Whether it's partnership, investment or venture collaboration — we respond with structure and clarity.</p>
             <div className="mt-auto pt-8 flex gap-3">
               <Button asChild variant="default"><Link to="/proposal">Request Proposal <ArrowUpRight className="h-4 w-4 ml-1" /></Link></Button>
               <Button asChild variant="gold-outline"><Link to="/contact">Book a Meeting</Link></Button>
@@ -459,7 +440,7 @@ const Home = () => {
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
             {brandValues.map((v) => (
-              <div key={v.title} className="border-t border-white/10 pt-6">
+              <div key={v.id || v.title} className="border-t border-white/10 pt-6">
                 <p className="font-display font-semibold text-xl text-secondary-foreground">{v.title}</p>
                 <p className="mt-2 text-sm text-secondary-foreground/70 leading-relaxed">{v.copy}</p>
               </div>

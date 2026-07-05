@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import {
   LayoutDashboard, Settings, User, Briefcase, Layers, FileText, Image as ImageIcon,
-  MessageSquare, Inbox, Star, Award, Users, Search, LogOut, Eye, EyeOff,
-  Trash2, Edit3, Plus, Save, Download, ArrowUpRight, ShieldCheck, Palette
+  MessageSquare, Inbox, Star, Award, Users, Search, LogOut,
+  Trash2, Plus, Save, Download, ArrowUpRight, ShieldCheck, Palette, Upload as UploadIcon,
+  X, Loader2, CheckCircle2, Eye
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -14,26 +15,11 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 import {
-  siteSettings as defaultSiteSettings,
-  founder as defaultFounder,
-  ventures as defaultVentures,
-  services as defaultServices,
-  impactMetrics as defaultImpactMetrics,
-  journey as defaultJourney,
-  testimonials as defaultTestimonials,
-  documents as defaultDocuments,
-} from '@/data/mockData';
-
-const useLocalState = (key, initial) => {
-  const [state, setState] = useState(() => {
-    try {
-      const raw = localStorage.getItem(key);
-      return raw ? JSON.parse(raw) : initial;
-    } catch { return initial; }
-  });
-  useEffect(() => { localStorage.setItem(key, JSON.stringify(state)); }, [key, state]);
-  return [state, setState];
-};
+  login as apiLogin, me as apiMe,
+  putSingleton, listAdmin, createItem, updateItem, deleteItem,
+  uploadFile, listProposals, listContacts, setProposalStatus, setContactStatus,
+  deleteProposal, deleteContact, resolveMedia,
+} from '@/lib/api';
 
 const nav = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -42,18 +28,39 @@ const nav = [
   { id: 'founder', label: 'Founder Profile', icon: User },
   { id: 'ventures', label: 'Ventures', icon: Briefcase },
   { id: 'services', label: 'Services', icon: Layers },
-  { id: 'impact', label: 'Impact Metrics', icon: Award },
+  { id: 'hero-metrics', label: 'Hero Metrics', icon: Star },
+  { id: 'business-verticals', label: 'Business Verticals', icon: Layers },
+  { id: 'brand-values', label: 'Brand Values', icon: Award },
+  { id: 'impact-metrics', label: 'Impact Metrics', icon: Award },
+  { id: 'impact-stories', label: 'Impact Stories', icon: Award },
   { id: 'journey', label: 'Journey', icon: Star },
   { id: 'testimonials', label: 'Testimonials', icon: MessageSquare },
   { id: 'gallery', label: 'Media Gallery', icon: ImageIcon },
   { id: 'documents', label: 'Documents', icon: FileText },
+  { id: 'partners', label: 'Partners', icon: Users },
   { id: 'proposals', label: 'Proposal Inbox', icon: Inbox },
-  { id: 'contacts', label: 'Contact Messages', icon: Users },
+  { id: 'contacts', label: 'Contact Messages', icon: MessageSquare },
   { id: 'seo', label: 'SEO Settings', icon: ShieldCheck },
 ];
 
+// ---------- Login ----------
 const Login = ({ onLogin }) => {
   const [creds, setCreds] = useState({ email: 'admin@nnventure.com', password: 'demo1234' });
+  const [busy, setBusy] = useState(false);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setBusy(true);
+    try {
+      const res = await apiLogin(creds.email, creds.password);
+      localStorage.setItem('nnv_token', res.access_token);
+      toast.success('Welcome back');
+      onLogin();
+    } catch (err) {
+      toast.error('Sign-in failed', { description: err?.response?.data?.detail || 'Check your credentials' });
+    } finally { setBusy(false); }
+  };
+
   return (
     <div className="min-h-screen bg-primary text-primary-foreground flex items-center relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-navy" />
@@ -78,10 +85,7 @@ const Login = ({ onLogin }) => {
           </div>
         </div>
 
-        <form
-          onSubmit={(e) => { e.preventDefault(); onLogin(); }}
-          className="bg-card/[0.04] backdrop-blur-md border border-accent/20 p-10 rounded-sm"
-        >
+        <form onSubmit={submit} className="bg-card/[0.04] backdrop-blur-md border border-accent/20 p-10 rounded-sm">
           <p className="eyebrow-gold">Sign in</p>
           <h2 className="mt-3 font-display text-2xl">Administrator Access</h2>
           <div className="mt-8 space-y-4">
@@ -96,7 +100,9 @@ const Login = ({ onLogin }) => {
                 className="mt-2 bg-primary-foreground/[0.03] border-white/10 text-primary-foreground" />
             </div>
           </div>
-          <Button type="submit" variant="gold" size="lg" className="w-full mt-8">Enter Console <ArrowUpRight className="h-4 w-4 ml-1" /></Button>
+          <Button type="submit" variant="gold" size="lg" className="w-full mt-8" disabled={busy}>
+            {busy ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Signing in…</> : <>Enter Console <ArrowUpRight className="h-4 w-4 ml-1" /></>}
+          </Button>
           <p className="mt-4 text-xs text-primary-foreground/50">Demo credentials pre-filled — click Enter to explore the admin.</p>
         </form>
       </div>
@@ -104,6 +110,7 @@ const Login = ({ onLogin }) => {
   );
 };
 
+// ---------- Reusable primitives ----------
 const Card = ({ children, className }) => (
   <div className={cn('bg-card border border-border rounded-sm', className)}>{children}</div>
 );
@@ -121,391 +128,539 @@ const Section = ({ title, description, action, children }) => (
   </div>
 );
 
-const Field = ({ label, children }) => (
+const Field = ({ label, children, help }) => (
   <div>
     <Label className="text-xs tracking-widest uppercase text-muted-foreground">{label}</Label>
     <div className="mt-2">{children}</div>
+    {help && <p className="mt-1 text-[11px] text-muted-foreground">{help}</p>}
   </div>
 );
 
+const Empty = ({ icon: Icon, title, desc }) => (
+  <Card className="p-10 text-center">
+    <Icon className="h-8 w-8 text-accent mx-auto" />
+    <p className="mt-4 text-foreground font-medium">{title}</p>
+    {desc && <p className="mt-2 text-sm text-muted-foreground">{desc}</p>}
+  </Card>
+);
+
+const ImagePicker = ({ value, onChange, hint = 'PNG · JPG · SVG · up to 15MB' }) => {
+  const [busy, setBusy] = useState(false);
+  const ref = useRef();
+  const handle = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setBusy(true);
+    try {
+      const res = await uploadFile(file);
+      onChange(res.url);
+      toast.success('Uploaded');
+    } catch (err) {
+      toast.error('Upload failed', { description: err?.response?.data?.detail });
+    } finally { setBusy(false); if (ref.current) ref.current.value = ''; }
+  };
+  return (
+    <div className="flex items-center gap-4">
+      <div className="w-16 h-16 rounded-sm border border-border bg-muted flex items-center justify-center overflow-hidden">
+        {value ? <img src={resolveMedia(value)} alt="" className="w-full h-full object-cover" /> : <ImageIcon className="h-5 w-5 text-muted-foreground" />}
+      </div>
+      <div className="flex-1 min-w-0 flex flex-col gap-2">
+        <Input value={value || ''} onChange={(e) => onChange(e.target.value)} placeholder="Paste URL or upload" />
+        <div className="flex items-center gap-2">
+          <input type="file" hidden ref={ref} onChange={handle} accept=".png,.jpg,.jpeg,.webp,.gif,.svg" />
+          <Button type="button" variant="outline" size="sm" onClick={() => ref.current?.click()} disabled={busy}>
+            {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <UploadIcon className="h-3.5 w-3.5 mr-1" />} Upload
+          </Button>
+          {value && <Button type="button" variant="ghost" size="sm" onClick={() => onChange('')}><X className="h-3.5 w-3.5" /></Button>}
+          <span className="text-[11px] text-muted-foreground">{hint}</span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const FilePicker = ({ value, onChange, hint = 'PDF · DOC · up to 15MB' }) => {
+  const [busy, setBusy] = useState(false);
+  const ref = useRef();
+  const handle = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setBusy(true);
+    try {
+      const res = await uploadFile(file);
+      onChange(res.url);
+      toast.success('Uploaded');
+    } catch (err) { toast.error('Upload failed', { description: err?.response?.data?.detail }); }
+    finally { setBusy(false); if (ref.current) ref.current.value = ''; }
+  };
+  return (
+    <div className="flex items-center gap-3">
+      <Input className="flex-1" value={value || ''} onChange={(e) => onChange(e.target.value)} placeholder="Paste URL or upload" />
+      <input type="file" hidden ref={ref} onChange={handle} accept=".pdf,.doc,.docx" />
+      <Button type="button" variant="outline" size="sm" onClick={() => ref.current?.click()} disabled={busy}>
+        {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <UploadIcon className="h-3.5 w-3.5 mr-1" />} Upload
+      </Button>
+      {value && <a href={resolveMedia(value)} target="_blank" rel="noreferrer"><Button type="button" variant="ghost" size="icon"><Eye className="h-4 w-4" /></Button></a>}
+    </div>
+  );
+};
+
+// ---------- Singleton editor generic ----------
+const useSingleton = (key, initialLoad) => {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    initialLoad().then(d => { if (alive) { setData(d || {}); setLoading(false); } }).catch(() => setLoading(false));
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const save = async () => {
+    setSaving(true);
+    try {
+      await putSingleton(key, data);
+      toast.success('Saved');
+    } catch (err) { toast.error('Save failed', { description: err?.response?.data?.detail }); }
+    finally { setSaving(false); }
+  };
+  return { data, setData, loading, saving, save };
+};
+
+// ---------- Collection generic ----------
+const useCollection = (name) => {
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const reload = async () => {
+    setLoading(true);
+    try { const d = await listAdmin(name); setItems(d || []); } catch { }
+    finally { setLoading(false); }
+  };
+  useEffect(() => { reload(); /* eslint-disable-next-line */ }, []);
+  const create = async (draft) => {
+    try { const created = await createItem(name, draft); setItems([created, ...items]); toast.success('Added'); return created; }
+    catch (err) { toast.error('Add failed', { description: err?.response?.data?.detail }); }
+  };
+  const update = async (id, patch) => {
+    try { const updated = await updateItem(name, id, patch); setItems(items.map(x => (x.id === id || x.slug === id) ? { ...x, ...updated } : x)); }
+    catch (err) { toast.error('Save failed', { description: err?.response?.data?.detail }); }
+  };
+  const remove = async (id) => {
+    try { await deleteItem(name, id); setItems(items.filter(x => x.id !== id && x.slug !== id)); toast.success('Removed'); }
+    catch (err) { toast.error('Remove failed', { description: err?.response?.data?.detail }); }
+  };
+  return { items, setItems, loading, reload, create, update, remove };
+};
+
+// ---------- Panels ----------
+const SitePanel = () => {
+  const { data, setData, loading, saving, save } = useSingleton('site', () => import('@/lib/api').then(m => m.getSite()));
+  if (loading || !data) return <Empty icon={Loader2} title="Loading…" />;
+  const s = data;
+  return (
+    <Section title="Site Settings" description="Global information used across the website and footer."
+      action={<Button variant="gold" onClick={save} disabled={saving}><Save className="h-4 w-4 mr-1" /> {saving ? 'Saving…' : 'Save'}</Button>}>
+      <Card className="p-6 grid sm:grid-cols-2 gap-5">
+        <Field label="Site Name"><Input value={s.site_name || ''} onChange={(e) => setData({ ...s, site_name: e.target.value })} /></Field>
+        <Field label="Tagline"><Input value={s.tagline || ''} onChange={(e) => setData({ ...s, tagline: e.target.value })} /></Field>
+        <Field label="Email"><Input value={s.email || ''} onChange={(e) => setData({ ...s, email: e.target.value })} /></Field>
+        <Field label="Phone"><Input value={s.phone || ''} onChange={(e) => setData({ ...s, phone: e.target.value })} /></Field>
+        <Field label="WhatsApp"><Input value={s.whatsapp || ''} onChange={(e) => setData({ ...s, whatsapp: e.target.value })} /></Field>
+        <Field label="Business Hours"><Input value={s.business_hours || ''} onChange={(e) => setData({ ...s, business_hours: e.target.value })} /></Field>
+        <div className="sm:col-span-2"><Field label="Address"><Input value={s.address || ''} onChange={(e) => setData({ ...s, address: e.target.value })} /></Field></div>
+        <div className="sm:col-span-2"><Field label="Footer Description"><Textarea rows={3} value={s.footer_description || ''} onChange={(e) => setData({ ...s, footer_description: e.target.value })} /></Field></div>
+        <Field label="LinkedIn"><Input value={s.social_linkedin || ''} onChange={(e) => setData({ ...s, social_linkedin: e.target.value })} /></Field>
+        <Field label="Facebook"><Input value={s.social_facebook || ''} onChange={(e) => setData({ ...s, social_facebook: e.target.value })} /></Field>
+        <Field label="YouTube"><Input value={s.social_youtube || ''} onChange={(e) => setData({ ...s, social_youtube: e.target.value })} /></Field>
+        <Field label="Instagram"><Input value={s.social_instagram || ''} onChange={(e) => setData({ ...s, social_instagram: e.target.value })} /></Field>
+      </Card>
+    </Section>
+  );
+};
+
+const BrandPanel = () => {
+  const { data, setData, loading, saving, save } = useSingleton('brand', () => import('@/lib/api').then(m => m.getBrand()));
+  if (loading || !data) return <Empty icon={Loader2} title="Loading…" />;
+  const b = data;
+  return (
+    <Section title="Brand Settings" description="Colours, typography and identity references." action={<Button variant="gold" onClick={save} disabled={saving}><Save className="h-4 w-4 mr-1" /> {saving ? 'Saving…' : 'Save'}</Button>}>
+      <Card className="p-6 grid sm:grid-cols-2 gap-5">
+        <Field label="Primary Colour"><div className="flex gap-2"><Input value={b.primary || ''} onChange={(e) => setData({ ...b, primary: e.target.value })} /><span className="h-10 w-10 rounded-sm border border-border" style={{ background: b.primary }} /></div></Field>
+        <Field label="Accent Colour"><div className="flex gap-2"><Input value={b.accent || ''} onChange={(e) => setData({ ...b, accent: e.target.value })} /><span className="h-10 w-10 rounded-sm border border-border" style={{ background: b.accent }} /></div></Field>
+        <Field label="Emerald Colour"><div className="flex gap-2"><Input value={b.emerald || ''} onChange={(e) => setData({ ...b, emerald: e.target.value })} /><span className="h-10 w-10 rounded-sm border border-border" style={{ background: b.emerald }} /></div></Field>
+        <Field label="Heading Font"><Input value={b.font_heading || ''} onChange={(e) => setData({ ...b, font_heading: e.target.value })} /></Field>
+        <Field label="Body Font"><Input value={b.font_body || ''} onChange={(e) => setData({ ...b, font_body: e.target.value })} /></Field>
+        <div className="sm:col-span-2"><Field label="Logo"><ImagePicker value={b.logo_url} onChange={(v) => setData({ ...b, logo_url: v })} /></Field></div>
+      </Card>
+    </Section>
+  );
+};
+
+const FounderPanel = () => {
+  const { data, setData, loading, saving, save } = useSingleton('founder', () => import('@/lib/api').then(m => m.getFounder()));
+  if (loading || !data) return <Empty icon={Loader2} title="Loading…" />;
+  const f = data;
+  const setArr = (key, str) => setData({ ...f, [key]: str.split(/\n+/).map(s => s.trim()).filter(Boolean) });
+  return (
+    <Section title="Founder Profile" description="Editable executive profile used across the site." action={<Button variant="gold" onClick={save} disabled={saving}><Save className="h-4 w-4 mr-1" /> {saving ? 'Saving…' : 'Save'}</Button>}>
+      <Card className="p-6 grid sm:grid-cols-2 gap-5">
+        <Field label="Full Name"><Input value={f.full_name || ''} onChange={(e) => setData({ ...f, full_name: e.target.value })} /></Field>
+        <Field label="Designation"><Input value={f.designation || ''} onChange={(e) => setData({ ...f, designation: e.target.value })} /></Field>
+        <div className="sm:col-span-2"><Field label="Photo"><ImagePicker value={f.photo_url} onChange={(v) => setData({ ...f, photo_url: v })} /></Field></div>
+        <div className="sm:col-span-2"><Field label="Founder Profile PDF"><FilePicker value={f.founder_profile_pdf_url} onChange={(v) => setData({ ...f, founder_profile_pdf_url: v })} /></Field></div>
+        <div className="sm:col-span-2"><Field label="Short Bio"><Textarea rows={2} value={f.short_bio || ''} onChange={(e) => setData({ ...f, short_bio: e.target.value })} /></Field></div>
+        <div className="sm:col-span-2"><Field label="Long Bio"><Textarea rows={5} value={f.long_bio || ''} onChange={(e) => setData({ ...f, long_bio: e.target.value })} /></Field></div>
+        <Field label="Vision"><Textarea rows={3} value={f.vision || ''} onChange={(e) => setData({ ...f, vision: e.target.value })} /></Field>
+        <Field label="Leadership Philosophy"><Textarea rows={3} value={f.leadership_philosophy || ''} onChange={(e) => setData({ ...f, leadership_philosophy: e.target.value })} /></Field>
+        <Field label="Core Expertise (one per line)" help="Each line becomes a bullet"><Textarea rows={5} value={(f.expertise || []).join('\n')} onChange={(e) => setArr('expertise', e.target.value)} /></Field>
+        <Field label="Achievements (one per line)"><Textarea rows={5} value={(f.achievements || []).join('\n')} onChange={(e) => setArr('achievements', e.target.value)} /></Field>
+      </Card>
+    </Section>
+  );
+};
+
+const SeoPanel = () => {
+  const { data, setData, loading, saving, save } = useSingleton('seo', () => import('@/lib/api').then(m => m.getSeo()));
+  if (loading || !data) return <Empty icon={Loader2} title="Loading…" />;
+  return (
+    <Section title="SEO Settings" description="Per-page metadata." action={<Button variant="gold" onClick={save} disabled={saving}><Save className="h-4 w-4 mr-1" /> {saving ? 'Saving…' : 'Save'}</Button>}>
+      <div className="space-y-4">
+        {Object.entries(data).map(([slug, val]) => (
+          <Card key={slug} className="p-5 grid md:grid-cols-12 gap-3">
+            <div className="md:col-span-2"><p className="eyebrow-gold">/{slug}</p></div>
+            <div className="md:col-span-4"><Input value={val?.title || ''} onChange={(e) => setData({ ...data, [slug]: { ...val, title: e.target.value } })} placeholder="SEO Title" /></div>
+            <div className="md:col-span-6"><Input value={val?.description || ''} onChange={(e) => setData({ ...data, [slug]: { ...val, description: e.target.value } })} placeholder="Meta description" /></div>
+          </Card>
+        ))}
+      </div>
+    </Section>
+  );
+};
+
+// Generic list editor
+const ListEditor = ({ name, title, description, columns, defaultDraft, keyField = 'id', renderExtra }) => {
+  const c = useCollection(name);
+  if (c.loading) return <Empty icon={Loader2} title="Loading…" />;
+  return (
+    <Section title={title} description={description}
+      action={<Button variant="gold" onClick={() => c.create({ ...defaultDraft })}><Plus className="h-4 w-4 mr-1" /> Add</Button>}>
+      {c.items.length === 0 ? <Empty icon={Inbox} title="Nothing here yet" desc="Click Add to create the first entry." /> : (
+        <div className="space-y-3">
+          {c.items.map((item) => {
+            const id = item[keyField];
+            const patch = (upd) => c.setItems(c.items.map(x => x[keyField] === id ? { ...x, ...upd } : x));
+            const commit = () => c.update(id, { ...item });
+            return (
+              <Card key={id} className="p-5 grid md:grid-cols-12 gap-3 items-start">
+                {columns.map((col) => (
+                  <div key={col.key} className={col.span || 'md:col-span-3'}>
+                    {col.label && <Label className="text-[10px] tracking-widest uppercase text-muted-foreground">{col.label}</Label>}
+                    <div className={col.label ? 'mt-1' : ''}>
+                      {col.render ? col.render(item, patch, commit) : (
+                        <Input value={item[col.key] || ''} onChange={(e) => patch({ [col.key]: e.target.value })} onBlur={commit} placeholder={col.placeholder} />
+                      )}
+                    </div>
+                  </div>
+                ))}
+                <div className="md:col-span-2 flex justify-end gap-1 items-center">
+                  {renderExtra && renderExtra(item, patch, commit)}
+                  <Button variant="ghost" size="icon" onClick={() => c.remove(id)}><Trash2 className="h-4 w-4" /></Button>
+                </div>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+    </Section>
+  );
+};
+
+// ---------- Inbox ----------
+const InboxPanel = ({ kind = 'proposals' }) => {
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const reload = async () => {
+    setLoading(true);
+    try {
+      const d = kind === 'proposals' ? await listProposals() : await listContacts();
+      setItems(d || []);
+    } finally { setLoading(false); }
+  };
+  useEffect(() => { reload(); /* eslint-disable-next-line */ }, [kind]);
+
+  const setStatus = async (id, status) => {
+    try {
+      if (kind === 'proposals') await setProposalStatus(id, status);
+      else await setContactStatus(id, status);
+      setItems(items.map(x => x.id === id ? { ...x, status } : x));
+    } catch (err) { toast.error('Update failed'); }
+  };
+  const remove = async (id) => {
+    try {
+      if (kind === 'proposals') await deleteProposal(id); else await deleteContact(id);
+      setItems(items.filter(x => x.id !== id));
+      toast.success('Removed');
+    } catch { toast.error('Delete failed'); }
+  };
+
+  const title = kind === 'proposals' ? 'Proposal Inbox' : 'Contact Messages';
+  if (loading) return <Empty icon={Loader2} title="Loading…" />;
+  if (items.length === 0) return <Section title={title}><Empty icon={Inbox} title="Nothing yet" desc="Submissions will appear here in real time." /></Section>;
+
+  return (
+    <Section title={title}>
+      <div className="space-y-3">
+        {items.map((p) => (
+          <Card key={p.id} className="p-5 grid md:grid-cols-12 gap-4">
+            <div className="md:col-span-3">
+              <p className="font-medium text-foreground">{p.full_name || p.name}</p>
+              <p className="text-xs text-muted-foreground mt-1 break-all">{p.email}</p>
+              <p className="text-xs text-muted-foreground">{p.phone}</p>
+            </div>
+            <div className="md:col-span-3">
+              {kind === 'proposals' ? (
+                <>
+                  <p className="text-xs text-muted-foreground">Organisation</p>
+                  <p className="text-sm text-foreground">{p.organization || '—'}</p>
+                  <p className="mt-2 text-xs text-muted-foreground">Type</p>
+                  <p className="text-sm text-foreground">{p.inquiry_type || '—'}</p>
+                </>
+              ) : (
+                <>
+                  <p className="text-xs text-muted-foreground">Subject</p>
+                  <p className="text-sm text-foreground">{p.subject || '—'}</p>
+                </>
+              )}
+            </div>
+            <div className="md:col-span-4">
+              <p className="text-xs text-muted-foreground">Message</p>
+              <p className="text-sm text-foreground/85 line-clamp-4">{p.message || p.project_goal || '—'}</p>
+            </div>
+            <div className="md:col-span-2 flex md:flex-col md:items-end gap-2">
+              <select value={p.status} onChange={(e) => setStatus(p.id, e.target.value)}
+                className="h-8 px-2 rounded-sm bg-transparent text-xs border border-border text-foreground">
+                {['New', 'Read', 'Replied', 'Archived'].map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+              <p className="text-[10px] text-muted-foreground">{new Date(p.created_at).toLocaleString()}</p>
+              <Button variant="ghost" size="icon" onClick={() => remove(p.id)}><Trash2 className="h-4 w-4" /></Button>
+            </div>
+          </Card>
+        ))}
+      </div>
+    </Section>
+  );
+};
+
+// ---------- Dashboard ----------
+const Dashboard = ({ setTab }) => {
+  const [stats, setStats] = useState({ ventures: 0, services: 0, proposals: 0, contacts: 0 });
+  const [recent, setRecent] = useState([]);
+  useEffect(() => {
+    Promise.all([
+      listAdmin('ventures').catch(() => []),
+      listAdmin('services').catch(() => []),
+      listProposals().catch(() => []),
+      listContacts().catch(() => []),
+    ]).then(([v, s, p, c]) => {
+      setStats({ ventures: v.length, services: s.length, proposals: p.length, contacts: c.length });
+      setRecent(p.slice(0, 4));
+    });
+  }, []);
+  const cards = [
+    { label: 'Ventures', value: stats.ventures, icon: Briefcase },
+    { label: 'Services', value: stats.services, icon: Layers },
+    { label: 'Proposal Requests', value: stats.proposals, icon: Inbox },
+    { label: 'Contact Messages', value: stats.contacts, icon: MessageSquare },
+  ];
+  return (
+    <div className="space-y-8">
+      <Section title="Welcome, Administrator." description="Overview of NN Venture content and inbound activity.">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {cards.map(({ label, value, icon: Icon }) => (
+            <Card key={label} className="p-6">
+              <div className="flex items-center justify-between">
+                <p className="text-xs tracking-widest uppercase text-muted-foreground">{label}</p>
+                <Icon className="h-4 w-4 text-accent" />
+              </div>
+              <p className="mt-4 font-display text-4xl text-foreground">{value}</p>
+            </Card>
+          ))}
+        </div>
+      </Section>
+
+      <div className="grid lg:grid-cols-2 gap-6">
+        <Card className="p-6">
+          <div className="flex items-center justify-between mb-4">
+            <p className="eyebrow-gold">Recent Proposal Requests</p>
+            <button onClick={() => setTab('proposals')} className="text-xs text-accent link-underline">Open Inbox</button>
+          </div>
+          {recent.length === 0 ? <p className="text-sm text-muted-foreground py-8 text-center">No submissions yet.</p> : (
+            <div className="space-y-3">
+              {recent.map(p => (
+                <div key={p.id} className="flex items-center justify-between p-3 border border-border rounded-sm">
+                  <div className="min-w-0">
+                    <p className="font-medium text-foreground truncate">{p.full_name} — {p.inquiry_type || 'General'}</p>
+                    <p className="text-xs text-muted-foreground truncate">{p.organization || '—'} · {new Date(p.created_at).toLocaleString()}</p>
+                  </div>
+                  <Badge variant="outline">{p.status}</Badge>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+
+        <Card className="p-6">
+          <p className="eyebrow-gold">Quick Actions</p>
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            {[
+              { label: 'Edit Founder', tab: 'founder' },
+              { label: 'Add Venture', tab: 'ventures' },
+              { label: 'Update Metrics', tab: 'impact-metrics' },
+              { label: 'Upload Documents', tab: 'documents' },
+              { label: 'Site Settings', tab: 'site' },
+              { label: 'View Site', href: '/' },
+            ].map(a => a.href ? (
+              <Link key={a.label} to={a.href} className="p-4 border border-border rounded-sm hover:border-accent transition-colors text-sm text-foreground">{a.label} <ArrowUpRight className="h-3.5 w-3.5 inline ml-1" /></Link>
+            ) : (
+              <button key={a.label} onClick={() => setTab(a.tab)} className="p-4 border border-border rounded-sm hover:border-accent transition-colors text-sm text-left text-foreground">{a.label} →</button>
+            ))}
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
+};
+
+// ---------- Root ----------
 const Admin = () => {
-  const [loggedIn, setLoggedIn] = useState(() => localStorage.getItem('nnv_auth') === 'y');
+  const [authed, setAuthed] = useState(false);
+  const [checking, setChecking] = useState(true);
   const [tab, setTab] = useState('dashboard');
 
-  const [site, setSite] = useLocalState('nnv_site', defaultSiteSettings);
-  const [brand, setBrand] = useLocalState('nnv_brand', { primary: '#07111F', accent: '#C9A227', emerald: '#0E6B4F', font_heading: 'Manrope', font_body: 'Inter', logo_url: '', favicon_url: '' });
-  const [founder, setFounder] = useLocalState('nnv_founder', defaultFounder);
-  const [ventures, setVentures] = useLocalState('nnv_ventures', defaultVentures);
-  const [services, setServices] = useLocalState('nnv_services', defaultServices);
-  const [metrics, setMetrics] = useLocalState('nnv_metrics', defaultImpactMetrics);
-  const [journey, setJourney] = useLocalState('nnv_journey', defaultJourney);
-  const [testimonials, setTestimonials] = useLocalState('nnv_testimonials', defaultTestimonials);
-  const [docs, setDocs] = useLocalState('nnv_docs', defaultDocuments);
-  const [seo, setSeo] = useLocalState('nnv_seo', {
-    home: { title: 'NN Venture | Founder-Led Corporate Portfolio', description: 'A founder-led venture portfolio from Bangladesh.' },
-    about: { title: 'NN Venture | About', description: 'About NN Venture.' },
-    ventures: { title: 'NN Venture | Ventures', description: 'Venture portfolio.' },
-  });
+  useEffect(() => {
+    apiMe().then(() => setAuthed(true)).catch(() => setAuthed(false)).finally(() => setChecking(false));
+  }, []);
 
-  const [proposals] = useState(() => JSON.parse(localStorage.getItem('nnv_proposals') || '[]'));
-  const [contacts] = useState(() => JSON.parse(localStorage.getItem('nnv_contacts') || '[]'));
+  if (checking) return <div className="min-h-screen bg-primary flex items-center justify-center text-primary-foreground"><Loader2 className="h-6 w-6 animate-spin text-accent" /></div>;
+  if (!authed) return <Login onLogin={() => setAuthed(true)} />;
 
-  if (!loggedIn) return <Login onLogin={() => { localStorage.setItem('nnv_auth', 'y'); setLoggedIn(true); toast.success('Welcome back'); }} />;
-
-  const save = (label = 'Saved') => toast.success(label, { description: 'Changes saved to the CMS store.' });
-
-  const togglePublish = (list, setter, id) => {
-    setter(list.map(item => item.slug === id || item.year === id || item.title === id ? { ...item, published: !(item.published ?? true) } : item));
-  };
+  const logout = () => { localStorage.removeItem('nnv_token'); setAuthed(false); toast('Signed out'); };
 
   const renderTab = () => {
     switch (tab) {
-      case 'dashboard': {
-        const cards = [
-          { label: 'Ventures', value: ventures.length, icon: Briefcase },
-          { label: 'Services', value: services.length, icon: Layers },
-          { label: 'Proposal Requests', value: proposals.length, icon: Inbox },
-          { label: 'Contact Messages', value: contacts.length, icon: MessageSquare },
-        ];
-        return (
-          <div className="space-y-8">
-            <Section title="Welcome, Administrator." description="Overview of NN Venture content and inbound activity.">
-              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {cards.map(({ label, value, icon: Icon }) => (
-                  <Card key={label} className="p-6">
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs tracking-widest uppercase text-muted-foreground">{label}</p>
-                      <Icon className="h-4 w-4 text-accent" />
-                    </div>
-                    <p className="mt-4 font-display text-4xl text-foreground">{value}</p>
-                  </Card>
-                ))}
-              </div>
-            </Section>
-
-            <div className="grid lg:grid-cols-2 gap-6">
-              <Card className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <p className="eyebrow-gold">Recent Proposal Requests</p>
-                  <button onClick={() => setTab('proposals')} className="text-xs text-accent link-underline">Open Inbox</button>
-                </div>
-                {proposals.length === 0 ? (
-                  <p className="text-sm text-muted-foreground py-8 text-center">No submissions yet. Try submitting the proposal form.</p>
-                ) : (
-                  <div className="space-y-3">
-                    {proposals.slice(0, 4).map(p => (
-                      <div key={p.id} className="flex items-center justify-between p-3 border border-border rounded-sm">
-                        <div className="min-w-0">
-                          <p className="font-medium text-foreground truncate">{p.full_name || 'Unnamed'} — {p.inquiry_type || 'General'}</p>
-                          <p className="text-xs text-muted-foreground truncate">{p.organization || '—'} · {new Date(p.created_at).toLocaleString()}</p>
-                        </div>
-                        <Badge variant="outline">{p.status}</Badge>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </Card>
-
-              <Card className="p-6">
-                <p className="eyebrow-gold">Quick Actions</p>
-                <div className="mt-4 grid grid-cols-2 gap-3">
-                  {[
-                    { label: 'Edit Founder', tab: 'founder' },
-                    { label: 'Add Venture', tab: 'ventures' },
-                    { label: 'Update Metrics', tab: 'impact' },
-                    { label: 'Upload Documents', tab: 'documents' },
-                    { label: 'Site Settings', tab: 'site' },
-                    { label: 'View Site', href: '/' },
-                  ].map(a => a.href ? (
-                    <Link key={a.label} to={a.href} className="p-4 border border-border rounded-sm hover:border-accent transition-colors text-sm text-foreground">{a.label} <ArrowUpRight className="h-3.5 w-3.5 inline ml-1" /></Link>
-                  ) : (
-                    <button key={a.label} onClick={() => setTab(a.tab)} className="p-4 border border-border rounded-sm hover:border-accent transition-colors text-sm text-left text-foreground">{a.label} →</button>
-                  ))}
-                </div>
-              </Card>
+      case 'dashboard': return <Dashboard setTab={setTab} />;
+      case 'site': return <SitePanel />;
+      case 'brand': return <BrandPanel />;
+      case 'founder': return <FounderPanel />;
+      case 'seo': return <SeoPanel />;
+      case 'ventures': return (
+        <ListEditor
+          name="ventures" title="Ventures" description="Add, edit, publish or hide ventures."
+          keyField="slug"
+          defaultDraft={{ slug: `new-venture-${Date.now()}`, name: 'New Venture', category: 'Digital Ventures', status: 'Building', role: 'Founder', short_description: 'Description', image: '', published: false }}
+          columns={[
+            { key: 'image', label: 'Image', span: 'md:col-span-2', render: (it, patch, commit) => <ImagePicker value={it.image} onChange={(v) => { patch({ image: v }); setTimeout(commit, 0); }} /> },
+            { key: 'name', label: 'Name', span: 'md:col-span-2' },
+            { key: 'slug', label: 'Slug', span: 'md:col-span-1' },
+            { key: 'category', label: 'Category', span: 'md:col-span-2' },
+            { key: 'status', label: 'Status', span: 'md:col-span-1' },
+            { key: 'role', label: 'Role', span: 'md:col-span-2' },
+          ]}
+          renderExtra={(it, patch, commit) => (
+            <div className="flex items-center gap-2 mr-2">
+              <Switch checked={it.published ?? true} onCheckedChange={(v) => { patch({ published: v }); setTimeout(commit, 0); }} />
+              <span className="text-[10px] text-muted-foreground">{it.published ?? true ? 'Live' : 'Hidden'}</span>
             </div>
-          </div>
-        );
-      }
-
-      case 'site':
-        return (
-          <Section title="Site Settings" description="Global information used across the website and footer." action={<Button variant="gold" onClick={() => save('Site settings saved')}><Save className="h-4 w-4 mr-1" /> Save</Button>}>
-            <Card className="p-6 grid sm:grid-cols-2 gap-5">
-              <Field label="Site Name"><Input value={site.site_name} onChange={(e) => setSite({ ...site, site_name: e.target.value })} /></Field>
-              <Field label="Tagline"><Input value={site.tagline} onChange={(e) => setSite({ ...site, tagline: e.target.value })} /></Field>
-              <Field label="Email"><Input value={site.email} onChange={(e) => setSite({ ...site, email: e.target.value })} /></Field>
-              <Field label="Phone"><Input value={site.phone} onChange={(e) => setSite({ ...site, phone: e.target.value })} /></Field>
-              <Field label="WhatsApp"><Input value={site.whatsapp} onChange={(e) => setSite({ ...site, whatsapp: e.target.value })} /></Field>
-              <Field label="Business Hours"><Input value={site.business_hours} onChange={(e) => setSite({ ...site, business_hours: e.target.value })} /></Field>
-              <div className="sm:col-span-2">
-                <Field label="Address"><Input value={site.address} onChange={(e) => setSite({ ...site, address: e.target.value })} /></Field>
-              </div>
-              <div className="sm:col-span-2">
-                <Field label="Footer Description"><Textarea rows={3} value={site.footer_description} onChange={(e) => setSite({ ...site, footer_description: e.target.value })} /></Field>
-              </div>
-              <Field label="LinkedIn"><Input value={site.social_linkedin} onChange={(e) => setSite({ ...site, social_linkedin: e.target.value })} /></Field>
-              <Field label="Facebook"><Input value={site.social_facebook} onChange={(e) => setSite({ ...site, social_facebook: e.target.value })} /></Field>
-              <Field label="YouTube"><Input value={site.social_youtube} onChange={(e) => setSite({ ...site, social_youtube: e.target.value })} /></Field>
-              <Field label="Instagram"><Input value={site.social_instagram} onChange={(e) => setSite({ ...site, social_instagram: e.target.value })} /></Field>
-            </Card>
-          </Section>
-        );
-
-      case 'brand':
-        return (
-          <Section title="Brand Settings" description="Colours, typography and identity references." action={<Button variant="gold" onClick={() => save('Brand saved')}><Save className="h-4 w-4 mr-1" /> Save</Button>}>
-            <Card className="p-6 grid sm:grid-cols-2 gap-5">
-              <Field label="Primary Colour"><div className="flex gap-2"><Input value={brand.primary} onChange={(e) => setBrand({ ...brand, primary: e.target.value })} /><span className="h-10 w-10 rounded-sm border border-border" style={{ background: brand.primary }} /></div></Field>
-              <Field label="Accent Colour"><div className="flex gap-2"><Input value={brand.accent} onChange={(e) => setBrand({ ...brand, accent: e.target.value })} /><span className="h-10 w-10 rounded-sm border border-border" style={{ background: brand.accent }} /></div></Field>
-              <Field label="Emerald Colour"><div className="flex gap-2"><Input value={brand.emerald} onChange={(e) => setBrand({ ...brand, emerald: e.target.value })} /><span className="h-10 w-10 rounded-sm border border-border" style={{ background: brand.emerald }} /></div></Field>
-              <Field label="Heading Font"><Input value={brand.font_heading} onChange={(e) => setBrand({ ...brand, font_heading: e.target.value })} /></Field>
-              <Field label="Body Font"><Input value={brand.font_body} onChange={(e) => setBrand({ ...brand, font_body: e.target.value })} /></Field>
-              <Field label="Logo URL"><Input value={brand.logo_url} onChange={(e) => setBrand({ ...brand, logo_url: e.target.value })} placeholder="https://..." /></Field>
-            </Card>
-          </Section>
-        );
-
-      case 'founder':
-        return (
-          <Section title="Founder Profile" description="Editable executive profile used across the site." action={<Button variant="gold" onClick={() => save('Founder profile saved')}><Save className="h-4 w-4 mr-1" /> Save</Button>}>
-            <Card className="p-6 grid sm:grid-cols-2 gap-5">
-              <Field label="Full Name"><Input value={founder.full_name} onChange={(e) => setFounder({ ...founder, full_name: e.target.value })} /></Field>
-              <Field label="Designation"><Input value={founder.designation} onChange={(e) => setFounder({ ...founder, designation: e.target.value })} /></Field>
-              <Field label="Photo URL"><Input value={founder.photo_url} onChange={(e) => setFounder({ ...founder, photo_url: e.target.value })} /></Field>
-              <Field label="Founder PDF URL"><Input value={founder.founder_profile_pdf_url || ''} onChange={(e) => setFounder({ ...founder, founder_profile_pdf_url: e.target.value })} placeholder="Upload placeholder" /></Field>
-              <div className="sm:col-span-2"><Field label="Short Bio"><Textarea rows={2} value={founder.short_bio} onChange={(e) => setFounder({ ...founder, short_bio: e.target.value })} /></Field></div>
-              <div className="sm:col-span-2"><Field label="Long Bio"><Textarea rows={5} value={founder.long_bio} onChange={(e) => setFounder({ ...founder, long_bio: e.target.value })} /></Field></div>
-              <Field label="Vision"><Textarea rows={3} value={founder.vision} onChange={(e) => setFounder({ ...founder, vision: e.target.value })} /></Field>
-              <Field label="Leadership Philosophy"><Textarea rows={3} value={founder.leadership_philosophy} onChange={(e) => setFounder({ ...founder, leadership_philosophy: e.target.value })} /></Field>
-            </Card>
-          </Section>
-        );
-
-      case 'ventures':
-        return (
-          <Section
-            title="Ventures"
-            description="Add, edit, publish or hide ventures. Each is coordinated as part of the portfolio."
-            action={<Button variant="gold" onClick={() => { setVentures([{ slug: `new-venture-${Date.now()}`, name: 'New Venture', category: 'Digital Ventures', sector: 'Sector', status: 'Building', role: 'Founder', short_description: 'Description', image: '', published: false }, ...ventures]); save('Venture added'); }}><Plus className="h-4 w-4 mr-1" /> Add Venture</Button>}
-          >
-            <div className="space-y-3">
-              {ventures.map((v, idx) => (
-                <Card key={v.slug} className="p-5 grid md:grid-cols-12 gap-4 items-center">
-                  <div className="md:col-span-1 h-14 w-14 rounded-sm overflow-hidden bg-muted">
-                    {v.image && <img src={v.image} alt="" className="w-full h-full object-cover" />}
-                  </div>
-                  <div className="md:col-span-3">
-                    <Input value={v.name} onChange={(e) => { const c = [...ventures]; c[idx] = { ...v, name: e.target.value }; setVentures(c); }} />
-                    <p className="text-xs text-muted-foreground mt-1">/{v.slug}</p>
-                  </div>
-                  <div className="md:col-span-2"><Input value={v.category} onChange={(e) => { const c = [...ventures]; c[idx] = { ...v, category: e.target.value }; setVentures(c); }} /></div>
-                  <div className="md:col-span-2"><Input value={v.status} onChange={(e) => { const c = [...ventures]; c[idx] = { ...v, status: e.target.value }; setVentures(c); }} /></div>
-                  <div className="md:col-span-2"><Input value={v.role} onChange={(e) => { const c = [...ventures]; c[idx] = { ...v, role: e.target.value }; setVentures(c); }} /></div>
-                  <div className="md:col-span-2 flex items-center justify-end gap-2">
-                    <div className="flex items-center gap-2">
-                      <Switch checked={v.published ?? true} onCheckedChange={(checked) => { const c = [...ventures]; c[idx] = { ...v, published: checked }; setVentures(c); }} />
-                      <span className="text-xs text-muted-foreground">{v.published ?? true ? 'Live' : 'Hidden'}</span>
-                    </div>
-                    <Button variant="ghost" size="icon" onClick={() => { setVentures(ventures.filter(x => x.slug !== v.slug)); toast('Venture removed'); }}><Trash2 className="h-4 w-4" /></Button>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          </Section>
-        );
-
-      case 'services':
-        return (
-          <Section title="Services" description="Ways NN Venture collaborates with founders and organisations." action={<Button variant="gold" onClick={() => { setServices([{ slug: `service-${Date.now()}`, title: 'New Service', who: '', we: '', outcome: '' }, ...services]); save('Service added'); }}><Plus className="h-4 w-4 mr-1" /> Add Service</Button>}>
-            <div className="space-y-3">
-              {services.map((s, idx) => (
-                <Card key={s.slug} className="p-5 grid md:grid-cols-12 gap-4">
-                  <div className="md:col-span-3"><Input value={s.title} onChange={(e) => { const c = [...services]; c[idx] = { ...s, title: e.target.value }; setServices(c); }} /></div>
-                  <div className="md:col-span-3"><Input value={s.who} onChange={(e) => { const c = [...services]; c[idx] = { ...s, who: e.target.value }; setServices(c); }} placeholder="Who" /></div>
-                  <div className="md:col-span-3"><Input value={s.we} onChange={(e) => { const c = [...services]; c[idx] = { ...s, we: e.target.value }; setServices(c); }} placeholder="What we provide" /></div>
-                  <div className="md:col-span-2"><Input value={s.outcome} onChange={(e) => { const c = [...services]; c[idx] = { ...s, outcome: e.target.value }; setServices(c); }} placeholder="Outcome" /></div>
-                  <div className="md:col-span-1 flex justify-end"><Button variant="ghost" size="icon" onClick={() => { setServices(services.filter(x => x.slug !== s.slug)); }}><Trash2 className="h-4 w-4" /></Button></div>
-                </Card>
-              ))}
-            </div>
-          </Section>
-        );
-
-      case 'impact':
-        return (
-          <Section title="Impact Metrics" description="Report only what is verified. Metrics are marked editable until proof is attached." action={<Button variant="gold" onClick={() => { setMetrics([{ label: 'New Metric', value: '0', note: 'Editable' }, ...metrics]); }}><Plus className="h-4 w-4 mr-1" /> Add Metric</Button>}>
-            <div className="grid sm:grid-cols-2 gap-4">
-              {metrics.map((m, idx) => (
-                <Card key={idx} className="p-5">
-                  <Field label="Label"><Input value={m.label} onChange={(e) => { const c = [...metrics]; c[idx] = { ...m, label: e.target.value }; setMetrics(c); }} /></Field>
-                  <div className="grid grid-cols-2 gap-3 mt-3">
-                    <Field label="Value"><Input value={m.value} onChange={(e) => { const c = [...metrics]; c[idx] = { ...m, value: e.target.value }; setMetrics(c); }} /></Field>
-                    <Field label="Note"><Input value={m.note} onChange={(e) => { const c = [...metrics]; c[idx] = { ...m, note: e.target.value }; setMetrics(c); }} /></Field>
-                  </div>
-                  <div className="mt-4 flex justify-end"><Button variant="ghost" size="sm" onClick={() => setMetrics(metrics.filter((_, i) => i !== idx))}><Trash2 className="h-4 w-4" /></Button></div>
-                </Card>
-              ))}
-            </div>
-          </Section>
-        );
-
-      case 'journey':
-        return (
-          <Section title="Journey Timeline" description="Milestones displayed publicly on the Journey page." action={<Button variant="gold" onClick={() => { setJourney([{ year: `${new Date().getFullYear()}`, title: 'New milestone', desc: '' }, ...journey]); }}><Plus className="h-4 w-4 mr-1" /> Add Milestone</Button>}>
-            <div className="space-y-3">
-              {journey.map((j, idx) => (
-                <Card key={idx} className="p-5 grid md:grid-cols-12 gap-3">
-                  <div className="md:col-span-1"><Input value={j.year} onChange={(e) => { const c = [...journey]; c[idx] = { ...j, year: e.target.value }; setJourney(c); }} /></div>
-                  <div className="md:col-span-3"><Input value={j.title} onChange={(e) => { const c = [...journey]; c[idx] = { ...j, title: e.target.value }; setJourney(c); }} /></div>
-                  <div className="md:col-span-7"><Input value={j.desc} onChange={(e) => { const c = [...journey]; c[idx] = { ...j, desc: e.target.value }; setJourney(c); }} /></div>
-                  <div className="md:col-span-1 flex justify-end"><Button variant="ghost" size="icon" onClick={() => setJourney(journey.filter((_, i) => i !== idx))}><Trash2 className="h-4 w-4" /></Button></div>
-                </Card>
-              ))}
-            </div>
-          </Section>
-        );
-
-      case 'testimonials':
-        return (
-          <Section title="Testimonials" description="Add only verified endorsements before publishing." action={<Button variant="gold" onClick={() => { setTestimonials([{ quote: '', person: '', designation: '', org: '' }, ...testimonials]); }}><Plus className="h-4 w-4 mr-1" /> Add</Button>}>
-            <div className="grid md:grid-cols-2 gap-4">
-              {testimonials.map((t, idx) => (
-                <Card key={idx} className="p-5 space-y-3">
-                  <Field label="Quote"><Textarea rows={3} value={t.quote} onChange={(e) => { const c = [...testimonials]; c[idx] = { ...t, quote: e.target.value }; setTestimonials(c); }} /></Field>
-                  <div className="grid grid-cols-3 gap-3">
-                    <Field label="Person"><Input value={t.person} onChange={(e) => { const c = [...testimonials]; c[idx] = { ...t, person: e.target.value }; setTestimonials(c); }} /></Field>
-                    <Field label="Designation"><Input value={t.designation} onChange={(e) => { const c = [...testimonials]; c[idx] = { ...t, designation: e.target.value }; setTestimonials(c); }} /></Field>
-                    <Field label="Organisation"><Input value={t.org} onChange={(e) => { const c = [...testimonials]; c[idx] = { ...t, org: e.target.value }; setTestimonials(c); }} /></Field>
-                  </div>
-                  <div className="flex justify-end"><Button variant="ghost" size="sm" onClick={() => setTestimonials(testimonials.filter((_, i) => i !== idx))}><Trash2 className="h-4 w-4" /></Button></div>
-                </Card>
-              ))}
-            </div>
-          </Section>
-        );
-
-      case 'gallery':
-        return (
-          <Section title="Media Gallery" description="Placeholder gallery. Upload endpoint can be connected later." action={<Button variant="gold" onClick={() => toast('Upload endpoint placeholder', { description: 'Wire this to storage for real uploads.' })}><Plus className="h-4 w-4 mr-1" /> Upload</Button>}>
-            <Card className="p-10 text-center">
-              <ImageIcon className="h-8 w-8 text-accent mx-auto" />
-              <p className="mt-4 text-foreground font-medium">Gallery upload area</p>
-              <p className="mt-2 text-sm text-muted-foreground">Drag & drop images here. Placeholder — connect storage service to enable uploads.</p>
-            </Card>
-          </Section>
-        );
-
-      case 'documents':
-        return (
-          <Section title="Downloadable Documents" description="Company Profile, Founder Profile, Portfolio Deck, and more." action={<Button variant="gold" onClick={() => { setDocs([{ title: 'New Document', type: 'PDF', note: 'Description' }, ...docs]); }}><Plus className="h-4 w-4 mr-1" /> Add</Button>}>
-            <div className="space-y-3">
-              {docs.map((d, idx) => (
-                <Card key={idx} className="p-5 grid md:grid-cols-12 gap-3 items-center">
-                  <div className="md:col-span-1 h-11 w-11 rounded-sm bg-accent/10 border border-accent/25 flex items-center justify-center"><FileText className="h-5 w-5 text-accent" /></div>
-                  <div className="md:col-span-4"><Input value={d.title} onChange={(e) => { const c = [...docs]; c[idx] = { ...d, title: e.target.value }; setDocs(c); }} /></div>
-                  <div className="md:col-span-5"><Input value={d.note} onChange={(e) => { const c = [...docs]; c[idx] = { ...d, note: e.target.value }; setDocs(c); }} /></div>
-                  <div className="md:col-span-2 flex items-center justify-end gap-2">
-                    <Button variant="gold-outline" size="sm" onClick={() => toast('Upload PDF placeholder')}><Download className="h-4 w-4 mr-1" /> Attach</Button>
-                    <Button variant="ghost" size="icon" onClick={() => setDocs(docs.filter((_, i) => i !== idx))}><Trash2 className="h-4 w-4" /></Button>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          </Section>
-        );
-
-      case 'proposals':
-        return (
-          <Section title="Proposal Inbox" description="Submissions from the public proposal form.">
-            {proposals.length === 0 ? (
-              <Card className="p-10 text-center">
-                <Inbox className="h-8 w-8 text-accent mx-auto" />
-                <p className="mt-4 text-foreground font-medium">No proposals yet</p>
-                <p className="mt-2 text-sm text-muted-foreground">Submissions from /proposal will appear here.</p>
-              </Card>
-            ) : (
-              <div className="space-y-3">
-                {proposals.map((p) => (
-                  <Card key={p.id} className="p-5 grid md:grid-cols-12 gap-4">
-                    <div className="md:col-span-3">
-                      <p className="font-medium text-foreground">{p.full_name}</p>
-                      <p className="text-xs text-muted-foreground mt-1">{p.email}</p>
-                      <p className="text-xs text-muted-foreground">{p.phone}</p>
-                    </div>
-                    <div className="md:col-span-3">
-                      <p className="text-xs text-muted-foreground">Organisation</p>
-                      <p className="text-sm text-foreground">{p.organization || '—'}</p>
-                      <p className="mt-2 text-xs text-muted-foreground">Type</p>
-                      <p className="text-sm text-foreground">{p.inquiry_type || '—'}</p>
-                    </div>
-                    <div className="md:col-span-4">
-                      <p className="text-xs text-muted-foreground">Message</p>
-                      <p className="text-sm text-foreground/85">{p.message || p.project_goal || '—'}</p>
-                    </div>
-                    <div className="md:col-span-2 flex md:flex-col md:items-end gap-2">
-                      <Badge variant="outline">{p.status}</Badge>
-                      <p className="text-[10px] text-muted-foreground">{new Date(p.created_at).toLocaleString()}</p>
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </Section>
-        );
-
-      case 'contacts':
-        return (
-          <Section title="Contact Messages" description="Submissions from the public contact form.">
-            {contacts.length === 0 ? (
-              <Card className="p-10 text-center">
-                <MessageSquare className="h-8 w-8 text-accent mx-auto" />
-                <p className="mt-4 text-foreground font-medium">No messages yet</p>
-                <p className="mt-2 text-sm text-muted-foreground">Messages sent from /contact will appear here.</p>
-              </Card>
-            ) : (
-              <div className="space-y-3">
-                {contacts.map((c) => (
-                  <Card key={c.id} className="p-5 grid md:grid-cols-12 gap-4">
-                    <div className="md:col-span-3">
-                      <p className="font-medium">{c.name}</p>
-                      <p className="text-xs text-muted-foreground mt-1">{c.email}</p>
-                    </div>
-                    <div className="md:col-span-3"><p className="text-sm">{c.subject}</p></div>
-                    <div className="md:col-span-4"><p className="text-sm text-foreground/85">{c.message}</p></div>
-                    <div className="md:col-span-2 flex md:flex-col md:items-end gap-2">
-                      <Badge variant="outline">{c.status}</Badge>
-                      <p className="text-[10px] text-muted-foreground">{new Date(c.created_at).toLocaleString()}</p>
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </Section>
-        );
-
-      case 'seo':
-        return (
-          <Section title="SEO Settings" description="Per-page metadata. Editable by admin." action={<Button variant="gold" onClick={() => save('SEO saved')}><Save className="h-4 w-4 mr-1" /> Save</Button>}>
-            <div className="space-y-4">
-              {Object.entries(seo).map(([slug, val]) => (
-                <Card key={slug} className="p-5 grid md:grid-cols-12 gap-3">
-                  <div className="md:col-span-2"><p className="eyebrow-gold">/{slug}</p></div>
-                  <div className="md:col-span-4"><Input value={val.title} onChange={(e) => setSeo({ ...seo, [slug]: { ...val, title: e.target.value } })} placeholder="SEO Title" /></div>
-                  <div className="md:col-span-6"><Input value={val.description} onChange={(e) => setSeo({ ...seo, [slug]: { ...val, description: e.target.value } })} placeholder="Meta description" /></div>
-                </Card>
-              ))}
-            </div>
-          </Section>
-        );
-
+          )}
+        />
+      );
+      case 'services': return (
+        <ListEditor
+          name="services" title="Services" description="Ways NN Venture collaborates."
+          keyField="slug"
+          defaultDraft={{ slug: `service-${Date.now()}`, title: 'New Service', who: '', we: '', outcome: '' }}
+          columns={[
+            { key: 'title', label: 'Title', span: 'md:col-span-2' },
+            { key: 'who', label: 'Who it is for', span: 'md:col-span-3' },
+            { key: 'we', label: 'What we provide', span: 'md:col-span-3' },
+            { key: 'outcome', label: 'Outcome', span: 'md:col-span-2' },
+          ]}
+        />
+      );
+      case 'hero-metrics': return (
+        <ListEditor name="hero-metrics" title="Hero Metrics" description="Homepage top metrics." defaultDraft={{ label: 'New Metric', value: '0', note: 'Editable' }}
+          columns={[{ key: 'label', label: 'Label', span: 'md:col-span-4' }, { key: 'value', label: 'Value', span: 'md:col-span-3' }, { key: 'note', label: 'Note', span: 'md:col-span-3' }]} />
+      );
+      case 'business-verticals': return (
+        <ListEditor name="business-verticals" title="Business Verticals" description="Sector coverage on About & Home." defaultDraft={{ title: 'New Vertical', desc: '', icon: 'Cpu' }}
+          columns={[{ key: 'title', label: 'Title', span: 'md:col-span-3' }, { key: 'desc', label: 'Description', span: 'md:col-span-5' }, { key: 'icon', label: 'Icon (Lucide name)', span: 'md:col-span-2' }]} />
+      );
+      case 'brand-values': return (
+        <ListEditor name="brand-values" title="Brand Values" description="Core values shown on Home & About." defaultDraft={{ title: 'New Value', copy: '' }}
+          columns={[{ key: 'title', label: 'Title', span: 'md:col-span-3' }, { key: 'copy', label: 'Copy', span: 'md:col-span-7' }]} />
+      );
+      case 'impact-metrics': return (
+        <ListEditor name="impact-metrics" title="Impact Metrics" description="Report only what is verified." defaultDraft={{ label: 'New Metric', value: '0', note: 'Editable' }}
+          columns={[{ key: 'label', label: 'Label', span: 'md:col-span-4' }, { key: 'value', label: 'Value', span: 'md:col-span-3' }, { key: 'note', label: 'Note', span: 'md:col-span-3' }]} />
+      );
+      case 'impact-stories': return (
+        <ListEditor name="impact-stories" title="Impact Stories" description="Case-style challenge / action / outcome." defaultDraft={{ title: 'New Story', category: 'Business Impact', challenge: '', action: '', outcome: '', proof: '' }}
+          columns={[
+            { key: 'title', label: 'Title', span: 'md:col-span-2' },
+            { key: 'category', label: 'Category', span: 'md:col-span-2' },
+            { key: 'challenge', label: 'Challenge', span: 'md:col-span-2' },
+            { key: 'action', label: 'Action', span: 'md:col-span-2' },
+            { key: 'outcome', label: 'Outcome', span: 'md:col-span-2' },
+          ]} />
+      );
+      case 'journey': return (
+        <ListEditor name="journey" title="Journey Timeline" description="Milestones shown publicly." defaultDraft={{ year: `${new Date().getFullYear()}`, title: 'New milestone', desc: '' }}
+          columns={[
+            { key: 'year', label: 'Year', span: 'md:col-span-1' },
+            { key: 'title', label: 'Title', span: 'md:col-span-3' },
+            { key: 'desc', label: 'Description', span: 'md:col-span-6' },
+          ]} />
+      );
+      case 'testimonials': return (
+        <ListEditor name="testimonials" title="Testimonials" description="Only add verified endorsements." defaultDraft={{ quote: '', person: '', designation: '', org: '' }}
+          columns={[
+            { key: 'quote', label: 'Quote', span: 'md:col-span-4', render: (it, patch, commit) => <Textarea rows={3} value={it.quote || ''} onChange={(e) => patch({ quote: e.target.value })} onBlur={commit} /> },
+            { key: 'person', label: 'Person', span: 'md:col-span-2' },
+            { key: 'designation', label: 'Designation', span: 'md:col-span-2' },
+            { key: 'org', label: 'Organisation', span: 'md:col-span-2' },
+          ]} />
+      );
+      case 'gallery': return (
+        <ListEditor name="gallery" title="Media Gallery" description="Upload founder / venture / community imagery." defaultDraft={{ title: 'New Item', category: 'Founder', image: '' }}
+          columns={[
+            { key: 'image', label: 'Image', span: 'md:col-span-4', render: (it, patch, commit) => <ImagePicker value={it.image} onChange={(v) => { patch({ image: v }); setTimeout(commit, 0); }} /> },
+            { key: 'title', label: 'Title', span: 'md:col-span-3' },
+            { key: 'category', label: 'Category', span: 'md:col-span-3' },
+          ]} />
+      );
+      case 'documents': return (
+        <ListEditor name="documents" title="Downloadable Documents" description="Company Profile, Founder Profile, Portfolio Deck." defaultDraft={{ title: 'New Document', type: 'PDF', note: '', file_url: '' }}
+          columns={[
+            { key: 'title', label: 'Title', span: 'md:col-span-3' },
+            { key: 'note', label: 'Description', span: 'md:col-span-3' },
+            { key: 'file_url', label: 'File', span: 'md:col-span-4', render: (it, patch, commit) => <FilePicker value={it.file_url} onChange={(v) => { patch({ file_url: v }); setTimeout(commit, 0); }} /> },
+          ]} />
+      );
+      case 'partners': return (
+        <ListEditor name="partners" title="Partners" description="Partner and collaborator logos." defaultDraft={{ name: 'New Partner', logo_url: '' }}
+          columns={[
+            { key: 'logo_url', label: 'Logo', span: 'md:col-span-4', render: (it, patch, commit) => <ImagePicker value={it.logo_url} onChange={(v) => { patch({ logo_url: v }); setTimeout(commit, 0); }} /> },
+            { key: 'name', label: 'Name', span: 'md:col-span-6' },
+          ]} />
+      );
+      case 'proposals': return <InboxPanel kind="proposals" />;
+      case 'contacts': return <InboxPanel kind="contacts" />;
       default: return null;
     }
   };
 
   return (
     <div className="min-h-screen bg-muted/50 text-foreground flex">
-      {/* Sidebar */}
       <aside className="w-72 shrink-0 bg-primary text-primary-foreground min-h-screen flex flex-col">
         <div className="p-6 border-b border-white/10">
           <Link to="/" className="flex items-center gap-3">
@@ -520,26 +675,21 @@ const Admin = () => {
         </div>
         <nav className="p-3 flex-1 overflow-y-auto">
           {nav.map(({ id, label, icon: Icon }) => (
-            <button
-              key={id}
-              onClick={() => setTab(id)}
-              className={cn(
-                'w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded-sm transition-colors',
+            <button key={id} onClick={() => setTab(id)}
+              className={cn('w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded-sm transition-colors',
                 tab === id ? 'bg-accent/10 text-accent border-l-2 border-accent' : 'text-primary-foreground/70 hover:text-primary-foreground hover:bg-white/[0.03]'
-              )}
-            >
+              )}>
               <Icon className="h-4 w-4" /> {label}
             </button>
           ))}
         </nav>
         <div className="p-3 border-t border-white/10">
-          <button onClick={() => { localStorage.removeItem('nnv_auth'); setLoggedIn(false); toast('Signed out'); }} className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-primary-foreground/70 hover:text-accent rounded-sm">
+          <button onClick={logout} className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-primary-foreground/70 hover:text-accent rounded-sm">
             <LogOut className="h-4 w-4" /> Sign Out
           </button>
         </div>
       </aside>
 
-      {/* Main */}
       <main className="flex-1 min-w-0">
         <header className="h-16 bg-background border-b border-border flex items-center justify-between px-8 sticky top-0 z-30 backdrop-blur-md">
           <div className="flex items-center gap-3">
@@ -550,7 +700,7 @@ const Admin = () => {
           <div className="flex items-center gap-3">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Search\u2026" className="pl-9 w-64" />
+              <Input placeholder="Search…" className="pl-9 w-64" />
             </div>
             <Button asChild variant="outline" size="sm"><Link to="/">View Site <ArrowUpRight className="h-3.5 w-3.5 ml-1" /></Link></Button>
           </div>

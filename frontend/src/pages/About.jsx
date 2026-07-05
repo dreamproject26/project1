@@ -1,10 +1,11 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowUpRight, CheckCircle2, Target, Eye, Compass, Building2 } from 'lucide-react';
+import { ArrowUpRight, CheckCircle2, Target, Compass, Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SectionHeader } from '@/components/common/SectionHeader';
-import { EditableBadge } from '@/components/common/EditableBadge';
-import { brandValues, businessVerticals, secondaryHero } from '@/data/mockData';
+import { useMulti, PageLoader } from '@/lib/useFetch';
+import { getBrandValues, getVerticals } from '@/lib/api';
+import { secondaryHero } from '@/data/mockData';
 
 const PageHero = ({ eyebrow, title, description, image }) => (
   <section className="relative pt-32 pb-20 md:pt-40 md:pb-24 bg-primary text-primary-foreground overflow-hidden">
@@ -21,6 +22,10 @@ const PageHero = ({ eyebrow, title, description, image }) => (
 );
 
 const About = () => {
+  const { data, loading } = useMulti({ brandValues: getBrandValues, verticals: getVerticals });
+  if (loading || !data) return <div className="pt-32"><PageLoader /></div>;
+  const { brandValues, verticals } = data;
+
   const sections = [
     { icon: Compass, title: 'Who We Are', body: 'NN Venture is a founder-led corporate venture portfolio operating across diversified sectors — digital, commerce, agri, education, real estate and community.' },
     { icon: Building2, title: 'What We Do', body: 'We build, coordinate and scale ventures through strategy, structured partnerships, disciplined execution and operator-led leadership.' },
@@ -33,12 +38,7 @@ const About = () => {
   ];
   return (
     <div>
-      <PageHero
-        eyebrow="About NN Venture"
-        title="A founder-led corporate portfolio built for structured, long-term venture growth."
-        description="A credible, editable-first platform designed for proposals, partnerships, and long-horizon operations."
-        image={secondaryHero}
-      />
+      <PageHero eyebrow="About NN Venture" title="A founder-led corporate portfolio built for structured, long-term venture growth." description="A credible, editable-first platform designed for proposals, partnerships, and long-horizon operations." image={secondaryHero} />
 
       <section className="py-24 md:py-32 bg-background">
         <div className="container-executive grid lg:grid-cols-3 gap-8">
@@ -67,10 +67,10 @@ const About = () => {
 
       <section className="py-24 md:py-32 bg-background">
         <div className="container-executive">
-          <SectionHeader eyebrow="Core Values" title="Six principles that structure every venture." className="max-w-2xl" />
+          <SectionHeader eyebrow="Core Values" title="Principles that structure every venture." className="max-w-2xl" />
           <div className="mt-14 grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {brandValues.map((v) => (
-              <div key={v.title} className="p-8 border border-border rounded-sm bg-card card-hover flex flex-col">
+              <div key={v.id || v.title} className="p-8 border border-border rounded-sm bg-card card-hover flex flex-col">
                 <CheckCircle2 className="h-5 w-5 text-accent" />
                 <p className="mt-6 font-display font-semibold text-xl text-foreground">{v.title}</p>
                 <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{v.copy}</p>
@@ -84,8 +84,8 @@ const About = () => {
         <div className="container-executive">
           <SectionHeader eyebrow="Business Areas" title="A diversified structure by design." className="max-w-2xl" />
           <div className="mt-14 grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {businessVerticals.map((v) => (
-              <div key={v.title} className="flex flex-col p-8 border border-border rounded-sm bg-card card-hover">
+            {verticals.map((v) => (
+              <div key={v.id || v.title} className="flex flex-col p-8 border border-border rounded-sm bg-card card-hover">
                 <p className="font-display font-semibold text-xl text-foreground">{v.title}</p>
                 <p className="mt-2 text-sm text-muted-foreground">{v.desc}</p>
                 <div className="mt-auto pt-6 text-xs text-accent">Explore ventures →</div>

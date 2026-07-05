@@ -3,22 +3,26 @@ import { Link, useParams, Navigate } from 'react-router-dom';
 import { ArrowUpRight, ArrowLeft, Building2, Target, Users, CheckCircle2, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ventures } from '@/data/mockData';
+import { useFetch, PageLoader } from '@/lib/useFetch';
+import { getVenture, getVentures, resolveMedia } from '@/lib/api';
 import { EditableBadge } from '@/components/common/EditableBadge';
 
 const VentureDetail = () => {
   const { slug } = useParams();
-  const venture = ventures.find(v => v.slug === slug);
-  if (!venture) return <Navigate to="/ventures" replace />;
+  const { data: venture, loading, error } = useFetch(() => getVenture(slug), [slug]);
+  const { data: all } = useFetch(getVentures, []);
 
-  const others = ventures.filter(v => v.slug !== slug).slice(0, 3);
+  if (loading) return <div className="pt-32"><PageLoader /></div>;
+  if (error || !venture) return <Navigate to="/ventures" replace />;
+
+  const others = (all || []).filter(v => v.slug !== slug).slice(0, 3);
 
   const sections = [
     { label: 'Overview', body: venture.long_description, icon: Building2 },
-    { label: 'Background', body: `Situated within NN Venture’s ${venture.category} vertical, ${venture.name} operates in ${venture.sector} — building on the founder’s operating experience and structured coordination model.`, icon: Sparkles },
+    { label: 'Background', body: `Situated within NN Venture's ${venture.category} vertical, ${venture.name} operates in ${venture.sector} — building on the founder's operating experience and structured coordination model.`, icon: Sparkles },
     { label: 'Problem', body: venture.problem, icon: Target },
     { label: 'Objective', body: 'To create a credible, structured, and long-term operating unit within the NN Venture portfolio — with clear economics and measurable outcomes.', icon: Target },
-    { label: 'NN Venture’s Role', body: venture.role, icon: Users },
+    { label: 'NN Venture\'s Role', body: venture.role, icon: Users },
     { label: 'Strategy', body: 'A phased build across foundation, activation, and scale — with founder-level oversight at each stage.', icon: Sparkles },
     { label: 'Execution', body: 'Coordinated delivery through in-house operators and structured external partners, backed by disciplined reporting.', icon: CheckCircle2 },
     { label: 'Results', body: venture.impact, icon: CheckCircle2 },
@@ -28,7 +32,7 @@ const VentureDetail = () => {
     <div>
       <section className="relative pt-32 pb-20 md:pt-40 md:pb-24 bg-primary text-primary-foreground overflow-hidden">
         <div className="absolute inset-0">
-          <img src={venture.image} alt="" className="w-full h-full object-cover opacity-40" />
+          <img src={resolveMedia(venture.image)} alt="" className="w-full h-full object-cover opacity-40" />
           <div className="absolute inset-0 bg-gradient-to-b from-primary/70 to-primary" />
         </div>
         <div className="relative container-executive">
@@ -43,18 +47,9 @@ const VentureDetail = () => {
               <p className="mt-6 text-lg text-primary-foreground/80 max-w-2xl leading-relaxed">{venture.short_description}</p>
             </div>
             <div className="lg:col-span-4 grid grid-cols-2 gap-4">
-              <div className="border border-white/10 p-4 rounded-sm bg-primary-foreground/[0.03]">
-                <p className="eyebrow-gold">Sector</p>
-                <p className="mt-2 text-sm">{venture.sector}</p>
-              </div>
-              <div className="border border-white/10 p-4 rounded-sm bg-primary-foreground/[0.03]">
-                <p className="eyebrow-gold">Stage</p>
-                <p className="mt-2 text-sm">{venture.stage}</p>
-              </div>
-              <div className="col-span-2 border border-white/10 p-4 rounded-sm bg-primary-foreground/[0.03]">
-                <p className="eyebrow-gold">NN Venture Role</p>
-                <p className="mt-2 text-sm">{venture.role}</p>
-              </div>
+              <div className="border border-white/10 p-4 rounded-sm bg-primary-foreground/[0.03]"><p className="eyebrow-gold">Sector</p><p className="mt-2 text-sm">{venture.sector}</p></div>
+              <div className="border border-white/10 p-4 rounded-sm bg-primary-foreground/[0.03]"><p className="eyebrow-gold">Stage</p><p className="mt-2 text-sm">{venture.stage}</p></div>
+              <div className="col-span-2 border border-white/10 p-4 rounded-sm bg-primary-foreground/[0.03]"><p className="eyebrow-gold">NN Venture Role</p><p className="mt-2 text-sm">{venture.role}</p></div>
             </div>
           </div>
         </div>
@@ -70,9 +65,7 @@ const VentureDetail = () => {
               </ul>
               <div className="mt-6 border-t border-border pt-6">
                 <p className="text-xs text-muted-foreground">Interested in collaboration?</p>
-                <Button asChild variant="default" className="w-full mt-3">
-                  <Link to="/proposal">Request Proposal <ArrowUpRight className="h-4 w-4 ml-1" /></Link>
-                </Button>
+                <Button asChild variant="default" className="w-full mt-3"><Link to="/proposal">Request Proposal <ArrowUpRight className="h-4 w-4 ml-1" /></Link></Button>
               </div>
             </div>
           </aside>
@@ -107,7 +100,7 @@ const VentureDetail = () => {
             {others.map(v => (
               <Link key={v.slug} to={`/ventures/${v.slug}`} className="group flex flex-col bg-card border border-border rounded-sm overflow-hidden card-hover">
                 <div className="aspect-video overflow-hidden">
-                  <img src={v.image} alt={v.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                  <img src={resolveMedia(v.image)} alt={v.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
                 </div>
                 <div className="flex flex-col flex-1 p-6">
                   <p className="text-[10px] tracking-[0.22em] uppercase text-accent">{v.category}</p>

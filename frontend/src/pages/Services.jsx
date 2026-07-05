@@ -1,24 +1,21 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowUpRight, CheckCircle2, Handshake, Compass, TrendingUp, Palette, Megaphone, MapPin, Users, Coins, Cog } from 'lucide-react';
+import { ArrowUpRight, Handshake, Compass, TrendingUp, Palette, Megaphone, MapPin, Users, Coins, Cog } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { SectionHeader } from '@/components/common/SectionHeader';
-import { services, architectureImg } from '@/data/mockData';
+import { useFetch, PageLoader } from '@/lib/useFetch';
+import { getServices } from '@/lib/api';
+import { architectureImg } from '@/data/mockData';
 
 const iconMap = {
-  'business-partnership': Handshake,
-  'venture-building': Compass,
-  'strategic-consulting': TrendingUp,
-  'digital-transformation': Cog,
-  'brand-development': Palette,
-  'marketing-growth': Megaphone,
-  'local-business': MapPin,
-  'community-projects': Users,
-  'investment-jv': Coins,
-  'operational-coordination': Cog,
+  'business-partnership': Handshake, 'venture-building': Compass, 'strategic-consulting': TrendingUp,
+  'digital-transformation': Cog, 'brand-development': Palette, 'marketing-growth': Megaphone,
+  'local-business': MapPin, 'community-projects': Users, 'investment-jv': Coins, 'operational-coordination': Cog,
 };
 
 const Services = () => {
+  const { data: services, loading } = useFetch(getServices, []);
+  if (loading) return <div className="pt-32"><PageLoader /></div>;
+
   return (
     <div>
       <section className="relative pt-32 pb-20 md:pt-40 md:pb-24 bg-primary text-primary-foreground overflow-hidden">
@@ -28,18 +25,14 @@ const Services = () => {
         </div>
         <div className="relative container-executive">
           <span className="eyebrow-gold">Services & Collaboration</span>
-          <h1 className="mt-6 font-display font-semibold text-4xl sm:text-5xl lg:text-6xl leading-[1.05] max-w-4xl">
-            Ten ways to collaborate with NN Venture.
-          </h1>
-          <p className="mt-6 text-lg text-primary-foreground/75 max-w-2xl">
-            Every engagement is founder-led, disciplined, and scoped to deliver measurable outcomes — not activity.
-          </p>
+          <h1 className="mt-6 font-display font-semibold text-4xl sm:text-5xl lg:text-6xl leading-[1.05] max-w-4xl">Ten ways to collaborate with NN Venture.</h1>
+          <p className="mt-6 text-lg text-primary-foreground/75 max-w-2xl">Every engagement is founder-led, disciplined, and scoped to deliver measurable outcomes — not activity.</p>
         </div>
       </section>
 
       <section className="py-24 md:py-32 bg-background">
         <div className="container-executive space-y-6">
-          {services.map((s, i) => {
+          {(services || []).map((s, i) => {
             const Icon = iconMap[s.slug] || Compass;
             return (
               <div key={s.slug} className="group grid md:grid-cols-12 gap-6 p-8 md:p-10 border border-border rounded-sm bg-card card-hover">
@@ -52,22 +45,11 @@ const Services = () => {
                   <p className="mt-2 text-sm text-muted-foreground">Founder-supervised engagement</p>
                 </div>
                 <div className="md:col-span-7 grid sm:grid-cols-3 gap-6">
-                  <div>
-                    <p className="eyebrow-gold">Who it’s for</p>
-                    <p className="mt-2 text-sm text-foreground/85">{s.who}</p>
-                  </div>
-                  <div>
-                    <p className="eyebrow-gold">What we provide</p>
-                    <p className="mt-2 text-sm text-foreground/85">{s.we}</p>
-                  </div>
-                  <div>
-                    <p className="eyebrow-gold">Expected outcome</p>
-                    <p className="mt-2 text-sm text-foreground/85">{s.outcome}</p>
-                  </div>
+                  <div><p className="eyebrow-gold">Who it's for</p><p className="mt-2 text-sm text-foreground/85">{s.who}</p></div>
+                  <div><p className="eyebrow-gold">What we provide</p><p className="mt-2 text-sm text-foreground/85">{s.we}</p></div>
+                  <div><p className="eyebrow-gold">Expected outcome</p><p className="mt-2 text-sm text-foreground/85">{s.outcome}</p></div>
                   <div className="sm:col-span-3 mt-2">
-                    <Button asChild variant="gold-outline" size="sm">
-                      <Link to="/proposal">Request Proposal on {s.title} <ArrowUpRight className="h-3.5 w-3.5 ml-1" /></Link>
-                    </Button>
+                    <Button asChild variant="gold-outline" size="sm"><Link to="/proposal">Request Proposal on {s.title} <ArrowUpRight className="h-3.5 w-3.5 ml-1" /></Link></Button>
                   </div>
                 </div>
               </div>

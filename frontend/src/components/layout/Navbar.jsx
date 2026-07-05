@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
-import { Menu, X, ArrowUpRight } from 'lucide-react';
+import { Menu, ArrowUpRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { useSite } from '@/lib/siteContext';
+import { resolveMedia } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
 const nav = [
@@ -17,19 +19,29 @@ const nav = [
   { to: '/contact', label: 'Contact' },
 ];
 
-const Logo = ({ dark = false }) => (
-  <Link to="/" className="flex items-center gap-3 group">
-    <div className="relative w-10 h-10 rounded-sm bg-primary flex items-center justify-center overflow-hidden">
-      <span className="absolute inset-0 bg-gradient-navy" />
-      <span className="relative font-display font-bold text-lg text-accent tracking-tight">NN</span>
-      <span className="absolute -top-1 -right-1 w-2 h-2 bg-accent rounded-full" />
-    </div>
-    <div className="flex flex-col leading-none">
-      <span className={cn('font-display font-semibold text-[15px] tracking-tight', dark ? 'text-primary-foreground' : 'text-foreground')}>NN Venture</span>
-      <span className={cn('text-[10px] tracking-[0.22em] uppercase mt-1', dark ? 'text-accent' : 'text-muted-foreground')}>Founder-Led Portfolio</span>
-    </div>
-  </Link>
-);
+const Logo = ({ dark = false }) => {
+  const { brand } = useSite();
+  const hasLogo = !!brand?.logo_url;
+  return (
+    <Link to="/" className="flex items-center gap-3 group">
+      {hasLogo ? (
+        <div className="w-10 h-10 rounded-sm overflow-hidden bg-primary flex items-center justify-center">
+          <img src={resolveMedia(brand.logo_url)} alt="NN Venture" className="w-full h-full object-cover" />
+        </div>
+      ) : (
+        <div className="relative w-10 h-10 rounded-sm bg-primary flex items-center justify-center overflow-hidden">
+          <span className="absolute inset-0 bg-gradient-navy" />
+          <span className="relative font-display font-bold text-lg text-accent tracking-tight">NN</span>
+          <span className="absolute -top-1 -right-1 w-2 h-2 bg-accent rounded-full" />
+        </div>
+      )}
+      <div className="flex flex-col leading-none">
+        <span className={cn('font-display font-semibold text-[15px] tracking-tight', dark ? 'text-primary-foreground' : 'text-foreground')}>NN Venture</span>
+        <span className={cn('text-[10px] tracking-[0.22em] uppercase mt-1', dark ? 'text-accent' : 'text-muted-foreground')}>Founder-Led Portfolio</span>
+      </div>
+    </Link>
+  );
+};
 
 const Navbar = () => {
   const [scrolled, setScrolled] = useState(false);

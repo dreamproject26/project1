@@ -102,7 +102,92 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: "Test a premium founder-led corporate portfolio website (NN Venture) built as a frontend prototype. Focus on: Public Site Navigation, Home page, Ventures listing, Proposal form, Contact form, Admin panel, Mobile responsiveness, Legal pages."
+user_problem_statement: "Full end-to-end test of the NN Venture corporate portfolio, now backed by a real FastAPI + MongoDB backend (previously localStorage-only). Test all public pages loading live data, form submissions to backend, JWT authentication, admin CRUD operations, data persistence, and mobile responsiveness."
+
+backend:
+  - task: "FastAPI Backend Server"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "Backend server running successfully on port 8001. All API endpoints responding correctly. MongoDB connection established. Seed data loaded successfully (8 ventures, 10 services, 4 hero metrics, 6 business verticals, 6 brand values, 4 impact metrics, 3 impact stories, 7 journey items, 2 testimonials, 7 partners, 8 gallery items, 4 documents)."
+
+  - task: "Public API Endpoints"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "All public API endpoints tested and working: GET /api/site, /api/founder, /api/brand, /api/ventures, /api/ventures/:slug, /api/services, /api/impact/metrics, /api/impact/stories, /api/journey, /api/testimonials, /api/gallery, /api/documents, /api/partners, /api/hero-metrics, /api/business-verticals, /api/brand-values. All return 200 OK with correct data from MongoDB."
+
+  - task: "Form Submission Endpoints"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "Form submission endpoints working correctly: POST /api/contact returns 201 Created and persists to MongoDB contacts collection. POST /api/proposal returns 201 Created and persists to MongoDB proposals collection. Email notifications are MOCKED (SMTP not configured). Data successfully retrieved in admin panel."
+
+  - task: "JWT Authentication"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "JWT authentication working correctly. POST /api/auth/login with admin@nnventure.com / demo1234 returns JWT token. Token stored in localStorage as 'nnv_token'. GET /api/auth/me validates token and returns user info. Token correctly cleared on logout. 401 responses for unauthorized requests."
+
+  - task: "Admin CRUD Endpoints"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "Admin CRUD endpoints tested and working: PUT /api/admin/site (200 OK), PUT /api/admin/brand (200 OK), PUT /api/admin/founder (200 OK), PUT /api/admin/seo (200 OK). Collection endpoints: GET/POST/PUT/DELETE for ventures, services, hero-metrics, business-verticals, brand-values, impact-metrics, impact-stories, journey, testimonials, gallery, documents, partners. All operations persist to MongoDB correctly."
+
+  - task: "Admin Inbox Endpoints"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "Admin inbox endpoints working: GET /api/admin/proposals returns all proposals sorted by created_at. GET /api/admin/contacts returns all contact messages. PATCH /api/admin/proposals/:id updates status (New/Read/Replied/Archived) and persists to MongoDB. PATCH /api/admin/contacts/:id updates status. DELETE endpoints work correctly. Status updates verified to persist across page reloads."
+
+  - task: "File Upload Endpoint"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "File upload endpoint POST /api/admin/upload accepts multipart form data. Supports .png, .jpg, .jpeg, .webp, .gif, .svg, .pdf, .doc, .docx up to 15MB. Returns {url: '/api/uploads/filename'} which is served via StaticFiles. Upload functionality visible in admin panel for images and documents."
 
 frontend:
   - task: "Public Site Navigation"
@@ -115,7 +200,7 @@ frontend:
     status_history:
       - working: true
         agent: "testing"
-        comment: "All navbar links tested and working correctly. Home, About, Founder, Ventures, Services, Impact, Journey, Media, Contact all navigate to correct pages. CTA buttons 'Proposal' and 'Get in Touch' also work as expected."
+        comment: "BACKEND INTEGRATION TEST: All navbar links tested and working correctly with backend data. Home, About, Founder, Ventures, Services, Impact, Journey, Media, Contact all navigate to correct pages and load data from API. Navbar displays small gold monogram logo image. CTA buttons work correctly. All pages make successful API calls to backend (200 OK responses)."
 
   - task: "Home Page Components"
     implemented: true
@@ -127,7 +212,7 @@ frontend:
     status_history:
       - working: true
         agent: "testing"
-        comment: "All home page sections render correctly: Hero section with headline 'Built for business, innovation, and long-term impact', CTA buttons (Request Business Proposal → /proposal, Explore Ventures → /ventures), Metrics strip, Business Verticals grid, Featured Ventures grid, Services grid, Impact metrics, Journey preview, Testimonials, Partners marquee. No JavaScript errors detected."
+        comment: "BACKEND INTEGRATION TEST: Home page loads all data from backend API successfully. Made 24+ successful API calls to endpoints: /api/hero-metrics, /api/business-verticals, /api/ventures, /api/services, /api/impact/metrics, /api/journey, /api/testimonials, /api/partners, /api/brand-values, /api/founder, /api/brand, /api/site. All sections render with live MongoDB data. Hero headline displays correctly. No console errors detected."
 
   - task: "Ventures Listing and Filtering"
     implemented: true
@@ -139,7 +224,7 @@ frontend:
     status_history:
       - working: true
         agent: "testing"
-        comment: "Ventures page filtering works perfectly. Status filters (All, Active, Building, Upcoming) correctly filter cards. Category pill filters work. Search input filters by name/description. Clicking venture card navigates to /ventures/:slug detail page. Tested with 8 ventures total, Active filter shows 5, Building shows 2."
+        comment: "BACKEND INTEGRATION TEST: Ventures page loads 8 ventures from MongoDB via GET /api/ventures. Status filters (All, Active, Building, Upcoming) work correctly - Active filter shows 5 ventures. Category filters functional. Search filters by name/description. Clicking venture card navigates to /ventures/:slug and loads detail data via GET /api/ventures/:slug (200 OK). All data fetched from backend successfully."
 
   - task: "Venture Detail Page"
     implemented: true
@@ -163,7 +248,7 @@ frontend:
     status_history:
       - working: true
         agent: "testing"
-        comment: "Proposal form submission works correctly. Required fields (Full Name, Email) validated. Optional fields (Organization, Designation, Business Type, Phone, Inquiry Type, Budget, Timeline, Project Goal, Message) all functional. Form submits successfully, shows success toast 'Proposal request received - The NN Venture team will respond within 2 business days.' Form clears after submission. Data stored in localStorage 'nnv_proposals'."
+        comment: "BACKEND INTEGRATION TEST: Proposal form submits to POST /api/proposal and returns 201 Created. Data persists to MongoDB proposals collection. Required fields (Full Name, Email) validated. Form clears after successful submission. Success toast displays 'Proposal request received - The NN Venture team will respond within 2 business days.' Submitted proposals appear in admin Proposal Inbox with all details. Email notification is MOCKED."
 
   - task: "Contact Form Submission"
     implemented: true
@@ -175,7 +260,7 @@ frontend:
     status_history:
       - working: true
         agent: "testing"
-        comment: "Contact form submission works correctly. Required fields (Name, Email) validated. Optional fields (Phone, Subject, Message) functional. Form submits successfully, shows success toast 'Message sent - Thank you — the founder's office will respond shortly.' Form clears after submission. Data stored in localStorage 'nnv_contacts'."
+        comment: "BACKEND INTEGRATION TEST: Contact form submits to POST /api/contact and returns 201 Created. Data persists to MongoDB contacts collection. Required fields (Name, Email, Message) validated. Form clears after successful submission. Success toast displays 'Message sent - Thank you — the founder's office will respond shortly.' Submitted messages appear in admin Contact Messages inbox. Email notification is MOCKED."
 
   - task: "Admin Panel Login"
     implemented: true
@@ -187,7 +272,7 @@ frontend:
     status_history:
       - working: true
         agent: "testing"
-        comment: "Admin login works correctly. Credentials pre-filled: admin@nnventure.com / demo1234. 'Enter Console' button logs in successfully. Dashboard loads with stats cards showing Ventures, Services, Proposal Requests, Contact Messages counts."
+        comment: "BACKEND INTEGRATION TEST: Admin login via POST /api/auth/login with credentials admin@nnventure.com / demo1234 returns JWT token. Token stored in localStorage as 'nnv_token'. Dashboard loads successfully showing stats from MongoDB: 10 Ventures (includes test venture), 10 Services, 1 Proposal Request, 1 Contact Message. GET /api/auth/me validates token correctly. Session persists across page reloads."
 
   - task: "Admin Panel Navigation"
     implemented: true
@@ -199,7 +284,7 @@ frontend:
     status_history:
       - working: true
         agent: "testing"
-        comment: "All admin sidebar tabs render without errors: Dashboard, Site Settings, Brand, Founder Profile, Ventures, Services, Impact Metrics, Journey, Testimonials, Media Gallery, Documents, Proposal Inbox, Contact Messages, SEO Settings. Each tab loads successfully."
+        comment: "BACKEND INTEGRATION TEST: All 17 admin sidebar tabs load successfully: Dashboard, Site Settings, Brand, Founder Profile, Ventures, Services, Hero Metrics, Business Verticals, Brand Values, Impact Metrics, Impact Stories, Journey, Testimonials, Media Gallery, Documents, Partners, Proposal Inbox, Contact Messages, SEO Settings. Each tab makes appropriate GET /api/admin/* calls and loads data from MongoDB."
 
   - task: "Admin Ventures Management"
     implemented: true
@@ -211,7 +296,7 @@ frontend:
     status_history:
       - working: true
         agent: "testing"
-        comment: "Ventures tab in admin works correctly. List renders with all ventures. 'Add Venture' button adds new row. Publish toggle switch works. Edit fields functional."
+        comment: "BACKEND INTEGRATION TEST: Ventures CRUD operations tested: (1) POST /api/admin/ventures creates new venture (200 OK), (2) PUT /api/admin/ventures/:slug updates venture name and fields (200 OK), (3) Publish toggle updates 'published' field - unpublished ventures correctly hidden from public /ventures page, (4) DELETE /api/admin/ventures/:slug removes venture (200 OK). All operations persist to MongoDB and reflect immediately on public pages."
 
   - task: "Admin Site Settings Save"
     implemented: true
@@ -223,7 +308,7 @@ frontend:
     status_history:
       - working: true
         agent: "testing"
-        comment: "Site Settings save functionality works. Clicking 'Save' button shows success toast 'Site settings saved - Changes saved to the CMS store.'"
+        comment: "BACKEND INTEGRATION TEST: Site Settings edit and save tested. Changed tagline field, clicked Save button → PUT /api/admin/site returns 200 OK. Changes persist to MongoDB. Reloaded admin panel and verified tagline value persisted. Reverted to original value successfully. All site settings fields (site_name, tagline, email, phone, whatsapp, business_hours, address, footer_description, social links) editable and persist correctly."
 
   - task: "Admin Proposal Inbox"
     implemented: true
@@ -235,7 +320,7 @@ frontend:
     status_history:
       - working: true
         agent: "testing"
-        comment: "Proposal Inbox displays submitted proposals correctly. Tested submissions appear in the inbox with full details (name, email, organization, inquiry type, message, timestamp, status). Verified 2 test entries present."
+        comment: "BACKEND INTEGRATION TEST: Proposal Inbox loads proposals via GET /api/admin/proposals (sorted by created_at desc). Test proposal 'Sarah Johnson' appears with all details. Status dropdown updates via PATCH /api/admin/proposals/:id with {status: 'Read'}. Status change persists to MongoDB - verified by page reload showing updated status. DELETE endpoint functional. All inbox operations work correctly with backend."
 
   - task: "Admin Contact Messages"
     implemented: true
@@ -247,7 +332,7 @@ frontend:
     status_history:
       - working: true
         agent: "testing"
-        comment: "Contact Messages displays submitted messages correctly. Tested submissions appear with full details (name, email, subject, message, timestamp, status). Verified 2 test entries present."
+        comment: "BACKEND INTEGRATION TEST: Contact Messages loads via GET /api/admin/contacts. Test contact message appears in inbox. Status updates via PATCH /api/admin/contacts/:id persist to MongoDB. DELETE endpoint functional. All contact message operations work correctly with backend persistence."
 
   - task: "Admin Sign Out"
     implemented: true
@@ -259,7 +344,7 @@ frontend:
     status_history:
       - working: true
         agent: "testing"
-        comment: "Sign Out button works correctly. Logs out user and returns to login page. Shows toast 'Signed out'."
+        comment: "BACKEND INTEGRATION TEST: Sign Out button clears JWT token from localStorage ('nnv_token' removed). User redirected to login page. Attempting to access admin routes after logout returns 401 Unauthorized. Re-login required to access admin panel. Logout flow works correctly."
 
   - task: "Legal Pages"
     implemented: true
@@ -283,34 +368,35 @@ frontend:
     status_history:
       - working: true
         agent: "testing"
-        comment: "Mobile responsiveness tested at 375px width. Home page hero and sections render properly with no horizontal overflow (body width: 375px). Mobile menu sheet opens on hamburger tap. Nav links work in mobile menu. Ventures grid stacks to one column. Proposal form is usable on mobile."
+        comment: "BACKEND INTEGRATION TEST: Mobile responsiveness tested at 390px width. Home page hero and sections render properly with no horizontal overflow (body width: 390px). All backend API calls work on mobile. Ventures grid stacks to one column. Proposal form is usable and submits successfully on mobile (POST /api/proposal returns 201). Contact form works on mobile. All features functional on mobile devices."
 
-  - task: "Design Quality"
+  - task: "Founder Profile Edit"
     implemented: true
     working: true
-    file: "/app/frontend/src/App.css, /app/frontend/tailwind.config.js"
+    file: "/app/frontend/src/pages/Admin.jsx, /app/frontend/src/pages/Founder.jsx"
     stuck_count: 0
-    priority: "medium"
+    priority: "high"
     needs_retesting: false
     status_history:
       - working: true
         agent: "testing"
-        comment: "Design quality is premium and corporate. Navy + gold color scheme confirmed (primary: 214 65% 8%, accent: 44 71% 47%). Premium fonts used (Manrope for headings, Inter for body). No broken images detected. No horizontal overflow. Design feels professional and executive-level."
+        comment: "BACKEND INTEGRATION TEST: Founder Profile edit tested. Changed designation field to 'Founder, Chairman & Lead Strategist', clicked Save → PUT /api/admin/founder returns 200 OK. Changes persist to MongoDB. Navigated to public /founder page and verified new designation displays correctly (fetched from GET /api/founder). Backend sync working perfectly."
 
 metadata:
   created_by: "testing_agent"
-  version: "1.0"
-  test_sequence: 1
+  version: "2.0"
+  test_sequence: 2
   run_ui: true
   last_tested: "2026-07-05"
+  backend_integration: true
 
 test_plan:
   current_focus:
-    - "All tests completed successfully"
+    - "Backend integration testing completed successfully"
   stuck_tasks: []
   test_all: true
   test_priority: "high_first"
 
 agent_communication:
   - agent: "testing"
-    message: "Comprehensive testing completed for NN Venture portfolio website. All major features tested and working correctly. Minor accessibility warnings detected in console (DialogContent missing DialogTitle) but these do not affect functionality. All navigation, forms, admin panel, filtering, and mobile responsiveness working as expected. Design quality is premium with navy + gold color scheme. Ready for production."
+    message: "BACKEND INTEGRATION TESTING COMPLETED. All features now working with FastAPI + MongoDB backend (previously localStorage). Comprehensive testing performed: (1) All public pages load data from backend API - 15+ unique endpoints tested, (2) Contact and Proposal forms submit to backend and persist to MongoDB (201 Created), (3) JWT authentication working correctly with token storage and validation, (4) Admin CRUD operations (Create, Read, Update, Delete) all persist to MongoDB, (5) Status updates in inbox persist across page reloads, (6) Publish/unpublish toggle works correctly, (7) Logout clears JWT token, (8) Mobile responsive at 390px width, (9) All forms work on mobile. NO CRITICAL ISSUES FOUND. Email notifications are MOCKED (SMTP not configured). Design quality remains premium navy + gold. All previously working features still work with backend integration. Ready for production deployment."
