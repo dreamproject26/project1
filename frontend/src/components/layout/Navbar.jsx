@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { Menu, X, ArrowUpRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
 
 const nav = [
@@ -97,6 +97,7 @@ const Navbar = () => {
               </button>
             </SheetTrigger>
             <SheetContent side="right" className="w-[85%] max-w-sm bg-primary text-primary-foreground border-l-0 p-0">
+              <SheetTitle className="sr-only">Menu</SheetTitle>
               <div className="p-6 flex flex-col h-full">
                 <div className="flex items-center justify-between mb-10">
                   <Logo dark />
