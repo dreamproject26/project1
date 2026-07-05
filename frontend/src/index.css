@@ -1,0 +1,214 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600;9..144,700&display=swap');
+
+@layer base {
+    :root {
+        /* NN Venture — Premium Navy + Gold executive palette */
+        --background: 210 40% 98%;              /* #F8FAFC */
+        --foreground: 214 32% 12%;              /* deep executive text */
+
+        --card: 0 0% 100%;
+        --card-foreground: 214 32% 12%;
+
+        --popover: 0 0% 100%;
+        --popover-foreground: 214 32% 12%;
+
+        --primary: 214 65% 8%;                  /* Primary Navy #07111F */
+        --primary-foreground: 44 55% 92%;
+
+        --secondary: 213 60% 16%;               /* Executive Blue #102A43 */
+        --secondary-foreground: 44 55% 92%;
+
+        --muted: 214 22% 94%;
+        --muted-foreground: 215 16% 42%;        /* Muted Gray #64748B */
+
+        --accent: 44 71% 47%;                   /* Gold #C9A227 */
+        --accent-foreground: 214 65% 8%;
+
+        --emerald: 158 76% 24%;                 /* Emerald #0E6B4F */
+        --emerald-foreground: 0 0% 100%;
+
+        --destructive: 0 72% 45%;
+        --destructive-foreground: 0 0% 100%;
+
+        --border: 214 20% 88%;
+        --input: 214 20% 88%;
+        --ring: 44 71% 47%;
+
+        --chart-1: 214 65% 8%;
+        --chart-2: 44 71% 47%;
+        --chart-3: 158 76% 24%;
+        --chart-4: 213 60% 30%;
+        --chart-5: 215 30% 55%;
+
+        --radius: 0.375rem;
+
+        /* Custom gradients & shadows */
+        --gradient-navy: linear-gradient(135deg, hsl(214 65% 8%) 0%, hsl(213 60% 16%) 60%, hsl(215 55% 22%) 100%);
+        --gradient-gold: linear-gradient(135deg, hsl(44 71% 47%) 0%, hsl(38 78% 55%) 100%);
+        --gradient-hero-overlay: linear-gradient(180deg, hsla(214 65% 8% / 0.55) 0%, hsla(214 65% 8% / 0.85) 100%);
+
+        --shadow-executive: 0 20px 50px -20px hsla(214 65% 8% / 0.35);
+        --shadow-gold: 0 12px 32px -12px hsla(44 71% 47% / 0.45);
+        --shadow-card: 0 1px 2px hsla(214 32% 12% / 0.04), 0 8px 24px -12px hsla(214 32% 12% / 0.10);
+
+        --transition-smooth: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .dark {
+        --background: 214 65% 6%;
+        --foreground: 44 40% 94%;
+        --card: 214 55% 10%;
+        --card-foreground: 44 40% 94%;
+        --popover: 214 55% 10%;
+        --popover-foreground: 44 40% 94%;
+        --primary: 44 71% 47%;
+        --primary-foreground: 214 65% 8%;
+        --secondary: 213 40% 20%;
+        --secondary-foreground: 44 40% 94%;
+        --muted: 214 30% 14%;
+        --muted-foreground: 215 20% 65%;
+        --accent: 44 71% 47%;
+        --accent-foreground: 214 65% 8%;
+        --destructive: 0 62.8% 45%;
+        --destructive-foreground: 0 0% 98%;
+        --border: 214 30% 18%;
+        --input: 214 30% 18%;
+        --ring: 44 71% 47%;
+    }
+}
+
+@layer base {
+    * { @apply border-border; }
+    html { scroll-behavior: smooth; }
+    body {
+        @apply bg-background text-foreground;
+        font-family: 'Inter', system-ui, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        font-feature-settings: 'ss01', 'cv11';
+    }
+    h1, h2, h3, h4, h5, h6 {
+        font-family: 'Manrope', 'Inter', sans-serif;
+        letter-spacing: -0.02em;
+    }
+    .font-serif-editorial {
+        font-family: 'Fraunces', 'Playfair Display', serif;
+        letter-spacing: -0.02em;
+    }
+    ::selection {
+        background: hsl(var(--accent));
+        color: hsl(var(--accent-foreground));
+    }
+}
+
+@layer components {
+    .container-executive {
+        @apply mx-auto max-w-7xl px-6 md:px-10 lg:px-14;
+    }
+    .eyebrow {
+        @apply inline-flex items-center gap-2 text-[11px] tracking-[0.22em] uppercase font-medium text-muted-foreground;
+    }
+    .eyebrow-gold {
+        @apply inline-flex items-center gap-2 text-[11px] tracking-[0.22em] uppercase font-semibold;
+        color: hsl(var(--accent));
+    }
+    .eyebrow-gold::before {
+        content: '';
+        display: inline-block;
+        width: 28px;
+        height: 1px;
+        background: hsl(var(--accent));
+    }
+    .gold-underline {
+        background-image: linear-gradient(hsl(var(--accent)), hsl(var(--accent)));
+        background-size: 100% 2px;
+        background-repeat: no-repeat;
+        background-position: 0 100%;
+    }
+    .card-hover {
+        transition: transform var(--transition-smooth), box-shadow var(--transition-smooth), border-color var(--transition-smooth);
+    }
+    .card-hover:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-executive);
+        border-color: hsl(var(--accent) / 0.4);
+    }
+    .grain-overlay::after {
+        content: '';
+        position: absolute; inset: 0;
+        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.35'/%3E%3C/svg%3E");
+        opacity: 0.12; pointer-events: none; mix-blend-mode: overlay;
+    }
+    .divider-gold {
+        display: inline-block;
+        width: 48px; height: 2px;
+        background: hsl(var(--accent));
+    }
+    .link-underline {
+        position: relative;
+    }
+    .link-underline::after {
+        content:''; position:absolute; left:0; bottom:-3px;
+        height:1px; width:100%; background: currentColor;
+        transform: scaleX(0); transform-origin: right;
+        transition: transform 400ms cubic-bezier(0.65, 0, 0.35, 1);
+    }
+    .link-underline:hover::after { transform: scaleX(1); transform-origin: left; }
+
+    /* Marquee logo strip */
+    .marquee {
+        display: flex;
+        overflow: hidden;
+        mask-image: linear-gradient(90deg, transparent, black 12%, black 88%, transparent);
+    }
+    .marquee-track {
+        display: flex;
+        gap: 3rem;
+        animation: marquee 40s linear infinite;
+        white-space: nowrap;
+    }
+    @keyframes marquee {
+        from { transform: translateX(0); }
+        to { transform: translateX(-50%); }
+    }
+
+    /* Reveal-on-scroll (used with framer-motion; here as fallback) */
+    .reveal-in {
+        animation: revealIn 700ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+    @keyframes revealIn {
+        from { opacity: 0; transform: translateY(24px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Ticker/pulse dot */
+    .pulse-dot {
+        position: relative; width: 8px; height: 8px; border-radius: 999px;
+        background: hsl(var(--emerald));
+    }
+    .pulse-dot::after {
+        content:''; position:absolute; inset:-4px; border-radius:999px;
+        border: 1px solid hsl(var(--emerald));
+        animation: pulseRing 2s ease-out infinite;
+    }
+    @keyframes pulseRing {
+        0% { opacity: 0.9; transform: scale(0.7); }
+        100% { opacity: 0; transform: scale(1.8); }
+    }
+}
+
+@layer base {
+    [data-debug-wrapper="true"] { display: contents !important; }
+    [data-debug-wrapper="true"] > * {
+        margin-left: inherit; margin-right: inherit; margin-top: inherit; margin-bottom: inherit;
+        padding-left: inherit; padding-right: inherit; padding-top: inherit; padding-bottom: inherit;
+        column-gap: inherit; row-gap: inherit; gap: inherit;
+        border-left-width: inherit; border-right-width: inherit; border-top-width: inherit; border-bottom-width: inherit;
+        border-left-style: inherit; border-right-style: inherit; border-top-style: inherit; border-bottom-style: inherit;
+        border-left-color: inherit; border-right-color: inherit; border-top-color: inherit; border-bottom-color: inherit;
+    }
+}
